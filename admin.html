@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>J111 签到系统 - 管理员后台</title>
+    <!-- 引入 Tailwind CSS 用于快速构建现代感后台 UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入安全加密库，用于对密码进行 SHA-256 哈希计算，防止源码泄露密码 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans flex items-center justify-center">
 
@@ -27,7 +26,7 @@
     </div>
 
     <!-- 2. 控制台主界面（默认隐藏，认证通过后显示） -->
-    <div id="adminContent" class="w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden hidden animate-fade-in">
+    <div id="adminContent" class="w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden hidden">
         <!-- 后台头部 -->
         <div class="bg-gray-800 p-5 text-white flex justify-between items-center">
             <h1 class="text-xl md:text-2xl font-bold tracking-wide">⚙️ 系统管理后台 (Admin Panel)</h1>
@@ -93,40 +92,36 @@
         // 请在此替换为你真实的 Google Apps Script 部署链接
         const API_URL = "https://script.google.com/macros/s/你的_WEB_APP_URL/exec";
 
-        // =========================================================================
-        // 安全配置说明：
-        // 为了防止他人通过密码看源码，这里存放的是密码经过 SHA-256 加密后的“指纹”（Hash）
-        // 这里的指纹对应的是原始明文密码： J111Admin2026
-        // =========================================================================
-        const CORRECT_PASSWORD_HASH = "8c66a4f2b963ba13460df6483ee8bc57d60f4eb789b5bc755609ee93fc13bfa7"; 
-
-        // 绑定输入框回车键事件
+        // 监听密码输入框的回车键，敲回车直接触发验证
         document.getElementById('inputPassword').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') verifyAdminPassword();
         });
 
-        // 验证密码
+        // 核心：明文密码验证函数
         function verifyAdminPassword() {
             const input = document.getElementById('inputPassword').value;
-            // 将输入的密码计算成 SHA-256 哈希值
-            const inputHash = CryptoJS.SHA256(input).toString();
+            
+            // ==========================================
+            // 在这里直接配置你的明文密码
+            // ==========================================
+            const MY_ADMIN_PASSWORD = "J111Admin2026"; 
 
-            if (inputHash === CORRECT_PASSWORD_HASH) {
+            if (input === MY_ADMIN_PASSWORD) {
                 document.getElementById('loginError').classList.add('hidden');
-                // 切换显示区域
+                // 隐藏登录框，拉起主控制面板
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('adminContent').classList.remove('hidden');
-                // 改变外部容器的对齐方式，让主控制台居中靠顶
+                // 让控制台在长页面中居中偏上对齐
                 document.body.classList.remove('flex', 'items-center');
                 
-                // 认证成功，开始从云端加载真实数据
+                // 验证成功，立马从 Google Sheets 数据库同步最新数据过来
                 loadCloudData();
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
         }
 
-        // 登出
+        // 退出登录
         function logoutAdmin() {
             document.getElementById('inputPassword').value = "";
             document.getElementById('loginOverlay').classList.remove('hidden');
@@ -134,7 +129,7 @@
             document.body.classList.add('flex', 'items-center');
         }
 
-        // 核心：拉取云端数据
+        // 从云端表格拉取配置数据填入输入框
         function loadCloudData() {
             fetch(API_URL)
                 .then(res => res.json())
@@ -147,10 +142,10 @@
                     document.getElementById('listAreas').value = data.options.areas.join(',');
                     document.getElementById('listSupervisors').value = data.options.supervisors.join(',');
                 })
-                .catch(err => alert("⚠️ 从云端拉取配置数据失败，请检查后端网络连接。"));
+                .catch(err => alert("⚠️ 从云端同步配置数据失败，请检查后端网络连接。"));
         }
 
-        // 核心：保存数据到云端
+        // 将修改好的配置数据打散发送给 Google Sheets 后端
         function saveConfigToCloud() {
             const btn = document.getElementById('btnSave');
             btn.innerText = "正在同步中... (Syncing...)";
@@ -174,7 +169,7 @@
 
             fetch(API_URL, {
                 method: "POST",
-                mode: "no-cors", // 兼容 Google Apps Script 的特殊重定向机制
+                mode: "no-cors", // 兼容 Google 脚本的跨域机制
                 body: JSON.stringify(payload)
             })
             .then(() => {
