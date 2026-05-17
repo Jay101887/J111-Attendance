@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J111 签到系统 - 管理员后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="bg-gray-800 p-5 text-white flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-wide">⚙️ 系统管理后台 (Admin Panel)</h1>
+            <span id="connStatus" class="text-sm bg-amber-500 px-3 py-1 rounded-full text-white">正在读取云端配置...</span>
+        </div>
+
+        <div class="p-6 space-y-8">
+            <!-- GPS 电子围栏设置 -->
+            <section class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                <h2 class="text-lg font-bold text-blue-800 mb-4 flex items-center">中心坐标与打卡范围配置</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">中心纬度 (Latitude)</label>
+                        <input type="text" id="cfgLat" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">中心经度 (Longitude)</label>
+                        <input type="text" id="cfgLng" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">允许打卡半径 (米)</label>
+                        <input type="number" id="cfgRadius" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 动态下拉菜单配置 -->
+            <section class="bg-orange-50 p-5 rounded-xl border border-orange-100">
+                <h2 class="text-lg font-bold text-orange-800 mb-4 flex items-center">前端下拉菜单选项管理</h2>
+                <p class="text-sm text-gray-600 mb-4">使用中英文逗号隔开各个选项。</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">工种列表 (Trades)</label>
+                        <textarea id="listTrades" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">工作区域 (Areas)</label>
+                        <textarea id="listAreas" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">负责督工 (Supervisors)</label>
+                        <textarea id="listSupervisors" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pt-4 border-t border-gray-200">
+                <button onclick="saveConfigToCloud()" id="btnSave" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-lg shadow transition duration-200 flex justify-center items-center">
+                    保存配置并同步至云端
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxQKD7AfUphbLQapj4CrCkvy7dlrgutGAi8hhAjw0eCdl2w8iSSQfVcwd7253eBB_f_/exec";
+
+        window.onload = function() {
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('cfgLat').value = data.config.lat || "";
+                    document.getElementById('cfgLng').value = data.config.lng || "";
+                    document.getElementById('cfgRadius').value = data.config.radius || "";
+                    document.getElementById('listTrades').value = data.options.trades ? data.options.trades.join(',') : "";
+                    document.getElementById('listAreas').value = data.options.areas ? data.options.areas.join(',') : "";
+                    document.getElementById('listSupervisors').value = data.options.supervisors ? data.options.supervisors.join(',') : "";
+                    
+                    const status = document.getElementById('connStatus');
+                    status.innerText = "云端连接正常";
+                    status.className = "text-sm bg-green-500 px-3 py-1 rounded-full text-white";
+                })
+                .catch(err => {
+                    const status = document.getElementById('connStatus');
+                    status.innerText = "云端连接失败，请确认后端部署";
+                    status.className = "text-sm bg-red-500 px-3 py-1 rounded-full text-white";
+                });
+        }
+
+        function saveConfigToCloud() {
+            const btn = document.getElementById('btnSave');
+            btn.innerText = "正在同步中... (Syncing...)";
+            btn.classList.add("opacity-70", "cursor-not-allowed");
+
+            const splitAndClean = (str) => str.replace(/，/g, ',').split(',').map(item => item.trim()).filter(item => item !== "");
+
+            const payload = {
+                action: "updateConfig",
+                config: {
+                    lat: parseFloat(document.getElementById('cfgLat').value),
+                    lng: parseFloat(document.getElementById('cfgLng').value),
+                    radius: parseInt(document.getElementById('cfgRadius').value)
+                },
+                options: {
+                    trades: splitAndClean(document.getElementById('listTrades').value),
+                    areas: splitAndClean(document.getElementById('listAreas').value),
+                    supervisors: splitAndClean(document.getElementById('listSupervisors').value)
+                }
+            };
+
+            fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
+            .then(() => {
+                alert("✅ 配置已成功更新至云端表格！所有设备将在下次打卡时秒级同步最新数据。");
+                btn.innerText = "保存配置并同步至云端";
+                btn.classList.remove("opacity-70", "cursor-not-allowed");
+            })
+            .catch(err => {
+                alert("保存失败，请检查网络！");
+                btn.innerText = "保存配置并同步至云端";
+                btn.classList.remove("opacity-70", "cursor-not-allowed");
+            });
+        }
+    </script>
+</body>
+</html>
