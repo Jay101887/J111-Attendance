@@ -3,116 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J111 现场签到系统</title>
+    <title>J111 现场智能考勤端</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        input, select, textarea { font-size: 16px !important; }
-    </style>
+    <style>input, select, textarea { font-size: 16px !important; }</style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col justify-center items-center p-4 font-sans">
 
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <!-- 头部导航与语言切换 -->
         <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
             <h1 id="appTitle" class="text-xl font-bold tracking-wider">J111 项目签到</h1>
-            <select id="langSelect" onchange="switchLanguage()" class="bg-blue-700 text-white text-sm rounded px-2 py-1 border-none outline-none">
-                <option value="zh">中文</option>
-                <option value="en">English</option>
-                <option value="bn">বাংলা</option>
+            <select id="langSelect" onchange="switchLanguage()" class="bg-blue-700 text-white text-sm rounded px-2 py-1 outline-none">
+                <option value="zh">中文</option><option value="en">English</option><option value="bn">বাংলা</option>
             </select>
         </div>
 
         <div class="p-6">
-            <!-- 动态时钟 (强制新加坡时区) -->
             <div class="text-center mb-6 bg-gray-100 py-3 rounded-lg border border-gray-200">
-                <p id="dateDisplay" class="text-gray-500 text-sm">正在同步云端时间...</p>
+                <p id="dateDisplay" class="text-gray-500 text-sm">同步新加坡时间...</p>
                 <p id="timeDisplay" class="text-3xl font-mono font-bold text-gray-800 mt-1">--:--:--</p>
+                <p class="text-[10px] text-gray-400 mt-1">设备识别号: <span id="deviceShow">--</span></p>
             </div>
 
-            <!-- 签到表单 -->
             <form id="attendanceForm" class="space-y-4">
-                <div>
-                    <label id="labelName" class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
-                    <input type="text" id="workerName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                </div>
-
-                <div>
-                    <label id="labelFin" class="block text-sm font-medium text-gray-700 mb-1">准证后四位 (FIN)</label>
-                    <input type="text" id="workerFin" maxlength="4" required placeholder="例如: 123A" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase focus:outline-none">
-                </div>
-
+                <div><label id="labelName" class="block text-sm font-medium text-gray-700 mb-1">姓名</label><input type="text" id="workerName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                <div><label id="labelFin" class="block text-sm font-medium text-gray-700 mb-1">准证后四位</label><input type="text" id="workerFin" maxlength="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg uppercase focus:ring-2 focus:ring-blue-500"></div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label id="labelTrade" class="block text-sm font-medium text-gray-700 mb-1">工种</label>
-                        <select id="workerTrade" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label id="labelArea" class="block text-sm font-medium text-gray-700 mb-1">工作区域</label>
-                        <select id="workerArea" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
+                    <div><label id="labelTrade" class="block text-sm font-medium text-gray-700 mb-1">工种</label><select id="workerTrade" required class="w-full px-4 py-2 border rounded-lg bg-white"></select></div>
+                    <div><label id="labelArea" class="block text-sm font-medium text-gray-700 mb-1">区域</label><select id="workerArea" required class="w-full px-4 py-2 border rounded-lg bg-white"></select></div>
                 </div>
+                <div><label id="labelSupervisor" class="block text-sm font-medium text-gray-700 mb-1">负责督工</label><select id="workerSupervisor" required class="w-full px-4 py-2 border rounded-lg bg-white"></select></div>
+                <div><label id="labelContent" class="block text-sm font-medium text-gray-700 mb-1">工作内容</label><textarea id="workerContent" required rows="2" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"></textarea></div>
 
-                <div>
-                    <label id="labelSupervisor" class="block text-sm font-medium text-gray-700 mb-1">负责领导 / 督工</label>
-                    <select id="workerSupervisor" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                        <option value="">加载中...</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label id="labelContent" class="block text-sm font-medium text-gray-700 mb-1">今日工作内容</label>
-                    <textarea id="workerContent" required rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
-                </div>
-
-                <div id="gpsWarning" class="text-xs text-orange-600 bg-orange-50 p-2 rounded flex items-center mt-2 border border-orange-100">
-                    <svg class="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span id="gpsText">请确保已开启手机 GPS 定位服务，系统将获取当前真实位置。</span>
-                </div>
+                <div class="text-xs text-orange-600 bg-orange-50 p-2 rounded flex items-center border border-orange-100"><span id="gpsText">请确保已开启手机 GPS 定位服务。</span></div>
 
                 <div class="flex gap-4 pt-2">
-                    <button type="button" onclick="processAttendance('checkin')" id="btnCheckIn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-md transition duration-200 active:scale-95">
-                        上班签到
-                    </button>
-                    <button type="button" onclick="processAttendance('checkout')" id="btnCheckOut" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-md transition duration-200 active:scale-95">
-                        下班签到
-                    </button>
+                    <button type="button" onclick="submitAttendance('checkin')" id="btnCheckIn" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">上班签到</button>
+                    <button type="button" onclick="submitAttendance('checkout')" id="btnCheckOut" class="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">下班签到</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxQKD7AfUphbLQapj4CrCkvy7dlrgutGAi8hhAjw0eCdl2w8iSSQfVcwd7253eBB_f_/exec";
-        let siteLat = null, siteLng = null, siteRadius = null;
+        const API_URL = "https://script.google.com/macros/s/AKfycbxQKD7AfUphbLQapj4CrCkvy7dlrgutGAi8hhAjw0eCdl2w8iSSQfVcwd7253eBB_f_/exec"; // 必须替换为新的部署链接
+        let siteLat, siteLng, siteRadius;
+        
+        let deviceUuid = localStorage.getItem('j111_device_uuid');
+        if (!deviceUuid) {
+            deviceUuid = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+            localStorage.setItem('j111_device_uuid', deviceUuid);
+        }
+        document.getElementById('deviceShow').innerText = deviceUuid;
 
         const i18n = {
-            zh: {
-                title: "J111 项目签到", name: "姓名", fin: "准证后四位 (FIN)", trade: "工种", area: "工作区域", supervisor: "负责领导 / 督工", content: "今日工作内容",
-                gpsWarning: "请确保已开启手机 GPS 定位服务，系统将获取当前真实位置。", checkIn: "上班签到", checkOut: "下班签到", placeholderFin: "例如: 123A", placeholderContent: "请简要输入今日负责的施工内容...",
-                alertLoading: "正在获取定位并校验，请稍候...", alertNoGPS: "定位失败！请检查手机是否开启GPS并允许网页获取位置权限。", selectDefault: "请选择...",
-                statusSuccess: "签到成功！数据已实时同步至云端表格。", statusLimit: "本班次您已完成过该签到，请勿重复提交！", statusOutWall: "签到失败！您当前不在指定的施工范围内。距离工地: "
-            },
-            en: {
-                title: "J111 Site Attendance", name: "Full Name", fin: "FIN Last 4 Chars", trade: "Trade", area: "Work Area", supervisor: "Leader / Supervisor", content: "Today's Task Description",
-                gpsWarning: "Please ensure your phone's GPS is turned on. Location will be verified.", checkIn: "Check In", checkOut: "Check Out", placeholderFin: "e.g., 123A", placeholderContent: "Briefly describe your work today...",
-                alertLoading: "Fetching location & verifying, please wait...", alertNoGPS: "Location failed! Please enable GPS and allow location access.", selectDefault: "Select...",
-                statusSuccess: "Success! Data synchronized to cloud sheet.", statusLimit: "You have already completed this action for this shift!", statusOutWall: "Failed! You are outside the designated area. Distance: "
-            },
-            bn: {
-                title: "J111 সাইট উপস্থিতি", name: "পুরো নাম", fin: "FIN শেষ ৪টি অক্ষর", trade: "পেশা", area: "কাজের এলাকা", supervisor: "তত্ত্বাবধায়ক / লিডার", content: "কাজের বিবরণ",
-                gpsWarning: "অনুগ্রহ করে নিশ্চিত করুন যে আপনার ফোনের জিপিএস চালু আছে।", checkIn: "কাজে যোগদান (Check In)", checkOut: "কাজ শেষ (Check Out)", placeholderFin: "যেমন: 123A", placeholderContent: "আজকের কাজের বিবরণ সংক্ষেপে লিখুন...",
-                alertLoading: "অবস্থান খোঁজা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...", alertNoGPS: "জিপিএস ব্যর্থ হয়েছে! অবস্থান অনুমতি চালু করুন।", selectDefault: "নির্বাচন করুন...",
-                statusSuccess: "সফল হয়েছে! ডেটা ক্লাউডে সিঙ্ক করা হয়েছে।", statusLimit: "আপনি ইতিমধ্যে এই শিফটের জন্য এই কাজটি সম্পন্ন করেছেন!", statusOutWall: "ব্যর্থ হয়েছে! আপনি নির্দিষ্ট এলাকার বাইরে আছেন। দূরত্ব: "
-            }
+            zh: { title: "J111 项目签到", name: "姓名", fin: "准证后四位 (FIN)", trade: "工种", area: "工作区域", supervisor: "负责领导 / 督工", content: "今日工作内容", gpsWarning: "请确保已开启手机 GPS 定位服务。", checkIn: "上班签到", checkOut: "下班签到", success: "考勤已成功记录！", outWall: "无法签到：不在工地范围内！距离: ", syncing: "同步中..." },
+            en: { title: "J111 Attendance", name: "Name", fin: "FIN Last 4", trade: "Trade", area: "Area", supervisor: "Supervisor", content: "Task", gpsWarning: "Ensure Phone GPS is ON.", checkIn: "Check In", checkOut: "Check Out", success: "Attendance recorded!", outWall: "Failed: Outside boundary. Distance: ", syncing: "Syncing..." }
         };
 
-        let currentLang = navigator.language.startsWith('zh') ? 'zh' : (navigator.language.startsWith('bn') ? 'bn' : 'en');
-        document.getElementById('langSelect').value = currentLang;
-
+        let currentLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
+        
         function switchLanguage() {
             currentLang = document.getElementById('langSelect').value;
             const dict = i18n[currentLang];
@@ -126,119 +75,69 @@
             document.getElementById('gpsText').innerText = dict.gpsWarning;
             document.getElementById('btnCheckIn').innerText = dict.checkIn;
             document.getElementById('btnCheckOut').innerText = dict.checkOut;
-            document.getElementById('workerFin').placeholder = dict.placeholderFin;
-            document.getElementById('workerContent').placeholder = dict.placeholderContent;
         }
 
-        function updateClock() {
+        setInterval(() => {
             const now = new Date();
-            const optionsDate = { timeZone: 'Asia/Singapore', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-            const optionsTime = { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-            document.getElementById('dateDisplay').innerText = new Intl.DateTimeFormat(currentLang === 'zh' ? 'zh-CN' : 'en-US', optionsDate).format(now);
-            document.getElementById('timeDisplay').innerText = new Intl.DateTimeFormat('en-US', optionsTime).format(now);
-        }
-        setInterval(updateClock, 1000);
+            document.getElementById('dateDisplay').innerText = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Singapore', dateStyle: 'full' }).format(now);
+            document.getElementById('timeDisplay').innerText = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Singapore', timeStyle: 'medium', hour12: false }).format(now);
+        }, 1000);
 
         window.onload = function() {
             switchLanguage();
-            updateClock();
-            fetch(API_URL)
-                .then(res => res.json())
-                .then(data => {
-                    siteLat = data.config.lat;
-                    siteLng = data.config.lng;
-                    siteRadius = data.config.radius;
-                    const dict = i18n[currentLang];
-
-                    const tradeSelect = document.getElementById('workerTrade');
-                    tradeSelect.innerHTML = `<option value="" disabled selected>${dict.selectDefault}</option>`;
-                    data.options.trades.forEach(t => tradeSelect.options.add(new Option(t, t)));
-
-                    const areaSelect = document.getElementById('workerArea');
-                    areaSelect.innerHTML = `<option value="" disabled selected>${dict.selectDefault}</option>`;
-                    data.options.areas.forEach(a => areaSelect.options.add(new Option(a, a)));
-
-                    const supervisorSelect = document.getElementById('workerSupervisor');
-                    supervisorSelect.innerHTML = `<option value="" disabled selected>${dict.selectDefault}</option>`;
-                    data.options.supervisors.forEach(s => supervisorSelect.options.add(new Option(s, s)));
-                })
-                .catch(err => console.error("同步配置失败:", err));
+            fetch(API_URL).then(res => res.json()).then(data => {
+                siteLat = data.config.lat; siteLng = data.config.lng; siteRadius = data.config.radius;
+                const fillSel = (id, arr) => {
+                    const el = document.getElementById(id); el.innerHTML = `<option value="" disabled selected>选择...</option>`;
+                    arr.forEach(i => el.options.add(new Option(i, i)));
+                };
+                fillSel('workerTrade', data.options.trades); fillSel('workerArea', data.options.areas); fillSel('workerSupervisor', data.options.supervisors);
+            });
         };
 
-        function getShiftId() {
-            const now = new Date();
-            const hours = now.getHours();
-            if (hours >= 20 || hours < 6) {
-                if (hours < 6) { now.setDate(now.getDate() - 1); }
-                return "NIGHT-" + now.toISOString().split('T')[0];
-            }
-            return "DAY-" + now.toISOString().split('T')[0];
-        }
-
-        function verifyDeviceLimit(actionType) {
-            const shiftId = getShiftId();
-            let record = JSON.parse(localStorage.getItem('j111_attendance_record')) || {};
-            if (record.shiftId !== shiftId) { record = { shiftId: shiftId, checkin: false, checkout: false }; }
-            if (record[actionType]) { alert(i18n[currentLang].statusLimit); return false; }
-            return record; 
-        }
-
         function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; 
-            const phi1 = lat1 * Math.PI/180, phi2 = lat2 * Math.PI/180;
-            const dPhi = (lat2-lat1) * Math.PI/180, dLambda = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(dPhi/2) * Math.sin(dPhi/2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda/2) * Math.sin(dLambda/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const p = 0.017453292519943295; const c = Math.cos;
+            const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
+            return 12742000 * Math.asin(Math.sqrt(a)); 
         }
 
-        function processAttendance(actionType) {
+        function submitAttendance(actionType) {
             const form = document.getElementById('attendanceForm');
             if(!form.checkValidity()) { form.reportValidity(); return; }
-            const localRecord = verifyDeviceLimit(actionType);
-            if (!localRecord) return;
+            if (!navigator.geolocation) { alert("GPS Unsupported"); return; }
+            
+            const btn = actionType === 'checkin' ? document.getElementById('btnCheckIn') : document.getElementById('btnCheckOut');
+            const originalText = btn.innerText;
+            btn.innerText = i18n[currentLang].syncing; btn.disabled = true;
 
-            alert(i18n[currentLang].alertLoading);
+            navigator.geolocation.getCurrentPosition(pos => {
+                const distance = getDistance(pos.coords.latitude, pos.coords.longitude, siteLat, siteLng);
+                if (distance > siteRadius) {
+                    alert(i18n[currentLang].outWall + Math.round(distance) + "m (Max: " + siteRadius + "m)");
+                    btn.innerText = originalText; btn.disabled = false; return;
+                }
 
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const userLat = position.coords.latitude;
-                        const userLng = position.coords.longitude;
+                const payload = {
+                    action: actionType, name: document.getElementById('workerName').value.trim(),
+                    fin: document.getElementById('workerFin').value.toUpperCase().trim(),
+                    trade: document.getElementById('workerTrade').value, area: document.getElementById('workerArea').value,
+                    supervisor: document.getElementById('workerSupervisor').value, content: document.getElementById('workerContent').value.trim(),
+                    lat: pos.coords.latitude, lng: pos.coords.longitude, distance: distance, siteRadius: siteRadius, deviceId: deviceUuid
+                };
 
-                        if (siteLat && siteLng && siteRadius) {
-                            const distance = getDistance(userLat, userLng, siteLat, siteLng);
-                            if (distance > siteRadius) {
-                                alert(i18n[currentLang].statusOutWall + distance.toFixed(0) + "m / Max: " + siteRadius + "m");
-                                return;
-                            }
-                        }
-
-                        const payload = {
-                            action: actionType,
-                            name: document.getElementById('workerName').value,
-                            fin: document.getElementById('workerFin').value.toUpperCase(),
-                            trade: document.getElementById('workerTrade').value,
-                            area: document.getElementById('workerArea').value,
-                            supervisor: document.getElementById('workerSupervisor').value,
-                            content: document.getElementById('workerContent').value,
-                            lat: userLat, lng: userLng,
-                            timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Singapore' })
-                        };
-
-                        fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
-                        .then(() => {
-                            localRecord[actionType] = true;
-                            localStorage.setItem('j111_attendance_record', JSON.stringify(localRecord));
-                            alert(i18n[currentLang].statusSuccess);
-                            form.reset();
-                            switchLanguage();
-                        })
-                        .catch(err => alert("网络连接异常，请重试！(Network Error)"));
-                    },
-                    function(error) { alert(i18n[currentLang].alertNoGPS); },
-                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
-                );
-            } else { alert(i18n[currentLang].alertNoGPS); }
+                // 核心更新：使用标准 text/plain 防止 CORS 拦截，且能读取真实状态
+                fetch(API_URL, { 
+                    method: "POST", 
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload) 
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') { alert(i18n[currentLang].success); form.reset(); switchLanguage(); }
+                })
+                .catch(err => alert("网络错误，请稍后重试！"))
+                .finally(() => { btn.innerText = originalText; btn.disabled = false; });
+            }, err => { alert("无法获取GPS定位"); btn.innerText = originalText; btn.disabled = false; }, { enableHighAccuracy: true, timeout: 8000 });
         }
     </script>
 </body>
