@@ -3,133 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J111 签到系统 - 管理员后台</title>
+    <title>J111 签到系统 - 智能管理控制台</title>
+    <!-- 引入前端样式与轻量级图表渲染引擎 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans flex items-center justify-center">
+<body class="bg-gray-100 min-h-screen p-4 md:p-6 font-sans flex items-center justify-center">
 
-    <!-- 1. 登录密码锁界面 -->
-    <div id="loginOverlay" class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+    <!-- ========================================== -->
+    <!-- 1. 管理员密码验证层 (Security Overlay)      -->
+    <!-- ========================================== -->
+    <div id="loginOverlay" class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 p-6">
         <div class="text-center mb-6">
             <span class="text-4xl">🔒</span>
             <h2 class="text-xl font-bold text-gray-800 mt-2">J111 管理员安全认证</h2>
-            <p class="text-xs text-gray-500 mt-1">请输入管理密码以访问控制台</p>
+            <p class="text-xs text-gray-400 mt-1">请输入项目管理授权密码以访问控制台</p>
         </div>
         <div class="space-y-4">
-            <input type="password" id="inputPassword" placeholder="输入密码 (Password)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:outline-none">
-            <p id="loginError" class="text-xs text-red-500 hidden">❌ 密码错误，拒绝访问！</p>
+            <input type="password" id="inputPassword" placeholder="输入控制台密码 (Password)" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:outline-none">
+            <p id="loginError" class="text-xs text-red-500 hidden">❌ 密码错误，安全防线已拦截！</p>
             <button onclick="verifyAdminPassword()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2.5 rounded-lg shadow transition">
-                验证登录
+                验证并进入系统
             </button>
         </div>
     </div>
 
-    <!-- 2. 控制台主界面 -->
-    <div id="adminContent" class="w-full max-w-4xl bg-white rounded-2xl shadow-lg overflow-hidden hidden">
-        <!-- 后台头部 -->
-        <div class="bg-gray-800 p-5 text-white flex justify-between items-center">
-            <h1 class="text-xl md:text-2xl font-bold tracking-wide">⚙️ J111 项目考勤与现场控制台</h1>
-            <button onclick="logoutAdmin()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition">退出登录</button>
+    <!-- ========================================== -->
+    <!-- 2. 主控制台管理界面                        -->
+    <!-- ========================================== -->
+    <div id="adminContent" class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden hidden">
+        <!-- 头部标题栏 -->
+        <div class="bg-gray-800 p-4 md:p-5 text-white flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-lg md:text-xl">⚙️</span>
+                <h1 class="text-lg md:text-xl font-bold tracking-wide">J111 项目考勤与现场控制台</h1>
+            </div>
+            <button onclick="logoutAdmin()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg transition">安全退出</button>
         </div>
 
-        <!-- 标签页切换 -->
+        <!-- 标签页控制中枢 -->
         <div class="flex border-b border-gray-200 bg-gray-50">
-            <button onclick="switchTab('analytics')" id="tab-analytics" class="flex-1 py-3 text-center font-bold text-gray-800 border-b-2 border-gray-800 transition">📊 现场今日看板</button>
-            <button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-3 text-center font-medium text-gray-500 hover:text-gray-700 transition">⚙️ 参数范围配置</button>
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="flex-1 py-3 text-center font-bold text-gray-800 border-b-2 border-gray-800 transition">📊 现场实时布控图</button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-3 text-center font-medium text-gray-500 hover:text-gray-700 transition">⚙️ 全局参数配置</button>
         </div>
 
-        <div class="p-6">
-            <!-- 【板块一：今日分析看板】 -->
+        <div class="p-4 md:p-6">
+            <!-- 【板块一：现场实时布控图看板】 -->
             <div id="section-analytics" class="space-y-6">
-                <!-- 快捷数字摘要 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                        <p class="text-sm text-blue-700 font-medium">工地范围内签到总数</p>
-                        <p id="stat-total" class="text-3xl font-bold text-blue-900 mt-1">-- 人</p>
+                <!-- 实时核心数字指标 -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm">
+                        <p class="text-xs md:text-sm text-blue-700 font-medium">工地内实到总人数</p>
+                        <p id="stat-total" class="text-2xl md:text-3xl font-bold text-blue-900 mt-1">-- 人</p>
                     </div>
-                    <div class="bg-green-50 p-4 rounded-xl border border-green-200">
-                        <p class="text-sm text-green-700 font-medium">当前设定的电子围栏半径</p>
-                        <p id="stat-radius" class="text-3xl font-bold text-green-900 mt-1">-- 米</p>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm">
+                        <p class="text-xs md:text-sm text-emerald-700 font-medium">当前判定围栏半径</p>
+                        <p id="stat-radius" class="text-2xl md:text-3xl font-bold text-emerald-900 mt-1">-- 米</p>
                     </div>
                 </div>
 
-                <!-- 核心：现场人员地理坐标平面布置图 -->
-                <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow-inner">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-gray-300 flex items-center">
-                            <span class="w-2 h-2 rounded-full bg-green-400 animate-ping mr-2"></span>
-                            J111 施工现场人员实时点位平面布置图 (雷达扫描)
+                <!-- 核心高科技区域：现场坐标平面布置图 -->
+                <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-2xl">
+                    <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+                        <h3 class="text-xs font-bold text-gray-300 flex items-center">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2"></span>
+                            J111 施工现场人员地理空间散点定位图
                         </h3>
-                        <span class="text-xs text-gray-500">圆心为工地中心点</span>
+                        <span class="text-[10px] text-gray-500">相对比例投影</span>
                     </div>
                     
                     <div class="flex flex-col md:flex-row items-center gap-6 justify-center">
-                        <!-- 图形画布 -->
-                        <div class="relative bg-gray-950 rounded-xl border border-gray-800 p-2">
-                            <canvas id="siteMapCanvas" width="320" height="320" class="block"></canvas>
+                        <!-- Canvas 平面雷达定位图 -->
+                        <div class="relative bg-gray-950 rounded-lg border border-gray-800 p-1 shadow-inner">
+                            <canvas id="siteMapCanvas" width="300" height="300" class="block"></canvas>
                         </div>
                         
-                        <!-- 右侧动态工种图例标记 -->
-                        <div class="flex-1 w-full bg-gray-800/40 p-4 rounded-xl border border-gray-700/50">
-                            <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">工种颜色图例 (Legend)</h4>
-                            <div id="jobLegendContainer" class="grid grid-cols-2 gap-3 text-xs text-gray-300">
-                                <!-- 由 JS 动态生成 -->
+                        <!-- 右侧工种分类动态图例 -->
+                        <div class="flex-1 w-full bg-gray-800/40 p-4 rounded-lg border border-gray-700/40">
+                            <h4 class="text-[11px] font-bold text-gray-400 mb-3 uppercase tracking-wider">工种色彩标识 (Legend)</h4>
+                            <div id="jobLegendContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-300">
+                                <!-- 由 JS 根据后端返回的工种自适应动态生成 -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 传统统计图表区域 -->
-                <div class="grid grid-cols-1 gap-6 pt-2">
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                        <h3 class="text-xs font-bold text-gray-600 mb-2 text-center">各工种出勤人数统计</h3>
-                        <canvas id="chartTrades" class="max-h-48"></canvas>
-                    </div>
+                <!-- 各工种出勤柱状图 -->
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <h3 class="text-xs font-bold text-gray-500 mb-2 text-center">各工作类别出勤占比统计</h3>
+                    <canvas id="chartTrades" class="max-h-40"></canvas>
                 </div>
             </div>
 
-            <!-- 【板块二：参数范围配置】 -->
-            <div id="section-settings" class="space-y-8 hidden">
-                <section class="bg-blue-50 p-5 rounded-xl border border-blue-100">
-                    <h2 class="text-lg font-bold text-blue-800 mb-4 flex items-center">📍 工地坐标与打卡范围配置</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 【板块二：全局参数范围配置】 -->
+            <div id="section-settings" class="space-y-6 hidden">
+                <!-- 坐标半径锁 -->
+                <section class="bg-blue-50 p-4 md:p-5 rounded-xl border border-blue-100">
+                    <h2 class="text-base font-bold text-blue-800 mb-3 flex items-center">📍 工地中心基准点与范围</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">中心纬度 (Latitude)</label>
-                            <input type="text" id="cfgLat" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">基准中心纬度 (Lat)</label>
+                            <input type="text" id="cfgLat" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">中心经度 (Longitude)</label>
-                            <input type="text" id="cfgLng" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">基准中心经度 (Lng)</label>
+                            <input type="text" id="cfgLng" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">允许打卡半径 (米)</label>
-                            <input type="number" id="cfgRadius" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                </section>
-
-                <section class="bg-orange-50 p-5 rounded-xl border border-orange-100">
-                    <h2 class="text-lg font-bold text-orange-800 mb-4 flex items-center">📝 前端下拉菜单选项管理</h2>
-                    <p class="text-sm text-gray-600 mb-4">使用中英文逗号隔开各个选项。</p>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">工种列表 (Trades)</label>
-                            <textarea id="listTrades" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">工作区域 (Areas)</label>
-                            <textarea id="listAreas" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">负责督工 (Supervisors)</label>
-                            <textarea id="listSupervisors" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"></textarea>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">电子围栏半径 (米)</label>
+                            <input type="number" id="cfgRadius" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
                         </div>
                     </div>
                 </section>
 
-                <div class="pt-4 border-t border-gray-200">
-                    <button onclick="saveConfigToCloud()" id="btnSave" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-lg shadow transition">
+                <!-- 下拉菜单控制区 -->
+                <section class="bg-amber-50 p-4 md:p-5 rounded-xl border border-amber-100">
+                    <h2 class="text-base font-bold text-amber-800 mb-1 flex items-center">📝 前端打卡页面下拉框选项</h2>
+                    <p class="text-xs text-gray-500 mb-3">多项请用逗号隔开，系统会自动处理中英文逗号与首尾空格。</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">允许考勤工种列表 (Trades)</label>
+                            <textarea id="listTrades" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">施工区域划分 (Areas)</label>
+                            <textarea id="listAreas" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">现场负责督工 (Supervisors)</label>
+                            <textarea id="listSupervisors" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 提交锁 -->
+                <div class="pt-2">
+                    <button onclick="saveConfigToCloud()" id="btnSave" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl shadow transition text-sm">
                         保存配置并同步至云端
                     </button>
                 </div>
@@ -138,22 +147,12 @@
     </div>
 
     <script>
-        // ⚠️ 请在此替换为你真实的 Google Apps Script 部署链接
+        // ⚠️ 请在此处粘贴你在 Google Apps Script 部署后获得的真实 Web App 链接
         const API_URL = "https://script.google.com/macros/s/你的_WEB_APP_URL/exec";
         const MY_ADMIN_PASSWORD = "J111Admin2026"; 
 
-        // 为不同工作/工种预设的高亮色彩池（现代工程大屏科技感色彩）
-        const COLOR_PALETTE = [
-            '#3B82F6', // 蓝色
-            '#10B981', // 绿色
-            '#F59E0B', // 橙色
-            '#EC4899', // 粉色
-            '#8B5CF6', // 紫色
-            '#06B6D4', // 青色
-            '#14B8A6', // 薄荷绿
-            '#F43F5E'  // 红色
-        ];
-
+        // 科技感工程色彩池，用于自动区分不同的工作种类点位
+        const COLOR_POOL = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#14B8A6', '#F43F5E'];
         let tradeChartInstance = null;
 
         document.getElementById('inputPassword').addEventListener('keypress', function (e) {
@@ -167,7 +166,7 @@
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('adminContent').classList.remove('hidden');
                 document.body.classList.remove('flex', 'items-center');
-                loadCloudData();
+                loadCloudData(); // 👈 登录验证通过，立刻触发双向数据流请求
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
@@ -187,168 +186,165 @@
             const secSettings = document.getElementById('section-settings');
 
             if (tabName === 'analytics') {
-                tabAnalytics.className = "flex-1 py-3 text-center font-bold text-gray-800 border-b-2 border-gray-800 transition";
-                tabSettings.className = "flex-1 py-3 text-center font-medium text-gray-500 hover:text-gray-700 transition";
+                tabAnalytics.className = "flex-1 py-3 text-center font-bold text-gray-800 border-b-2 border-gray-800 transition text-sm";
+                tabSettings.className = "flex-1 py-3 text-center font-medium text-gray-500 hover:text-gray-700 transition text-sm";
                 secAnalytics.classList.remove('hidden');
                 secSettings.classList.add('hidden');
             } else {
-                tabSettings.className = "flex-1 py-3 text-center font-bold text-gray-800 border-b-2 border-gray-800 transition";
-                tabAnalytics.className = "flex-1 py-3 text-center font-medium text-gray-500 hover:text-gray-700 transition";
+                tabSettings.className = "flex-1 py-3 text-center font-bold text-gray-800 border-b-2 border-gray-800 transition text-sm";
+                tabAnalytics.className = "flex-1 py-3 text-center font-medium text-gray-500 hover:text-gray-700 transition text-sm";
                 secSettings.classList.remove('hidden');
                 secAnalytics.classList.add('hidden');
             }
         }
 
+        /**
+         * 核心双向打通：向后端 GET 全量实时数据
+         */
         function loadCloudData() {
             fetch(API_URL)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("HTTP error");
+                    return res.json();
+                })
                 .then(data => {
+                    // 1. 将拉取到的云端现有配置反向填入输入框
                     document.getElementById('cfgLat').value = data.config.lat || "";
                     document.getElementById('cfgLng').value = data.config.lng || "";
                     document.getElementById('cfgRadius').value = data.config.radius || "";
                     
-                    document.getElementById('listTrades').value = data.options.trades.join(',');
-                    document.getElementById('listAreas').value = data.options.areas.join(',');
-                    document.getElementById('listSupervisors').value = data.options.supervisors.join(',');
+                    document.getElementById('listTrades').value = data.options.trades.join(', ');
+                    document.getElementById('listAreas').value = data.options.areas.join(', ');
+                    document.getElementById('listSupervisors').value = data.options.supervisors.join(', ');
                     
                     document.getElementById('stat-radius').innerText = (data.config.radius || 0) + " 米";
 
-                    // ==========================================
-                    // 核心：模拟/提取今日成功打卡人员的物理相对坐标点
-                    // 格式：{name: 姓名, trade: 工种, relX: 相对中心X米, relY: 相对中心Y米}
-                    // ==========================================
-                    const mockWorkersInside = [
-                        { name: "Ah Seng", trade: "钢筋工", relX: 45, relY: -30 },
-                        { name: "Kumar", trade: "钢筋工", relX: 60, relY: -15 },
-                        { name: "Ali", trade: "泥水工", relX: -80, relY: 50 },
-                        { name: "Wang", trade: "木工", relX: 10, relY: 120 },
-                        { name: "Chen", trade: "督工/管理", relX: -15, relY: -10 },
-                        { name: "Singh", trade: "泥水工", relX: -95, relY: 20 },
-                        { name: "Zhang", trade: "木工", relX: 25, relY: 95 }
-                    ];
-
-                    processAndDrawMap(mockWorkersInside, parseInt(data.config.radius || 150));
+                    // 2. 将后端计算好的真实在现场工友数据送入绘图大屏引擎
+                    if (data.analytics && data.analytics.workers) {
+                        processAndDrawMap(data.analytics.workers, parseInt(data.config.radius || 150), data.analytics.trades);
+                    } else {
+                        processAndDrawMap([], parseInt(data.config.radius || 150), {});
+                    }
                 })
-                .catch(err => alert("⚠️ 同步云端数据失败。"));
+                .catch(err => {
+                    console.error(err);
+                    alert("⚠️ 无法从谷歌云端获取数据。请确认：1. 后端重新部署选了'新版本'; 2. 谁可以访问选了'所有人'; 3. 你的 API_URL 正确。");
+                });
         }
 
-        // 核心绘图与分析引擎
-        function processAndDrawMap(workers, radius) {
+        /**
+         * Canvas 平面散点投影与立体图例渲染引擎
+         */
+        function processAndDrawMap(workers, radius, tradesSummary) {
             document.getElementById('stat-total').innerText = workers.length + " 人";
 
-            // 1. 动态为现场出现的工种派发颜色
-            const uniqueTrades = [...new Set(workers.map(w => w.trade))];
+            // 1. 动态自适应分配工种色彩
+            const uniqueTrades = Object.keys(tradesSummary);
             const tradeColors = {};
             uniqueTrades.forEach((trade, index) => {
-                tradeColors[trade] = COLOR_PALETTE[index % COLOR_PALETTE.length];
+                tradeColors[trade] = COLOR_POOL[index % COLOR_POOL.length];
             });
 
-            // 2. 渲染右侧动态图例
+            // 2. 动态生成右侧图例面板
             const legendContainer = document.getElementById('jobLegendContainer');
             legendContainer.innerHTML = "";
-            uniqueTrades.forEach(trade => {
-                const count = workers.filter(w => w.trade === trade).length;
-                legendContainer.innerHTML += `
-                    <div class="flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full inline-block" style="background-color: ${tradeColors[trade]}"></span>
-                        <span class="truncate">${trade} (${count}人)</span>
-                    </div>
-                `;
-            });
+            if(uniqueTrades.length === 0) {
+                legendContainer.innerHTML = `<p class="text-gray-500 text-xs italic col-span-2">今日暂无人员在场签到</p>`;
+            } else {
+                uniqueTrades.forEach(trade => {
+                    legendContainer.innerHTML += `
+                        <div class="flex items-center space-x-2 bg-gray-900/40 p-1.5 px-2.5 rounded border border-gray-700/30">
+                            <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: ${tradeColors[trade]}"></span>
+                            <span class="truncate text-gray-200">${trade}: <strong class="text-white">${tradesSummary[trade]}人</strong></span>
+                        </div>
+                    `;
+                });
+            }
 
-            // 3. 开始在 Canvas 上绘制电子围栏平面布置图
+            // 3. 画布几何计算与重绘
             const canvas = document.getElementById('siteMapCanvas');
             const ctx = canvas.getContext('2d');
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
-            const maxMapRadius = cx - 20; // 留出20px外边距
+            const maxMapRadius = cx - 20; // 留白边距
 
-            // 清空画布
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 绘制背景同心网格线（电子围栏安全防线）
+            // 绘制深色围栏底色与同心参考线
             ctx.strokeStyle = '#1E293B';
             ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(cx, cy, maxMapRadius, 0, 2 * Math.PI); ctx.stroke();
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.4)'; ctx.fill();
             
-            // 外圈围栏
-            ctx.beginPath();
-            ctx.arc(cx, cy, maxMapRadius, 0, 2 * Math.PI);
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
-            ctx.fill();
-
-            // 内圈（50%半径参考线）
-            ctx.beginPath();
-            ctx.arc(cx, cy, maxMapRadius * 0.5, 0, 2 * Math.PI);
-            ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, maxMapRadius * 0.5, 0, 2 * Math.PI); ctx.stroke();
 
             // 绘制十字轴线
             ctx.strokeStyle = '#334155';
             ctx.beginPath(); ctx.moveTo(cx - maxMapRadius, cy); ctx.lineTo(cx + maxMapRadius, cy); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx, cy - maxMapRadius); ctx.lineTo(cx, cy + maxMapRadius); ctx.stroke();
 
-            // 标记中心点（项目部/基坑中心位置）
+            // 标记红旗中心点（项目部/基坑原点）
             ctx.fillStyle = '#EF4444';
-            ctx.beginPath();
-            ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '10px sans-serif';
-            ctx.fillText("工地中心", cx + 8, cy + 4);
+            ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * Math.PI); ctx.fill();
+            ctx.fillStyle = '#94A3B8'; ctx.font = '10px sans-serif';
+            ctx.fillText("中心点", cx + 8, cy + 4);
 
-            // 4. 将工友的点位投影到平面图上
+            // 4. 正式循环绘制在场人员坐标
             workers.forEach(worker => {
-                // 将真实的物理米数，等比例缩放到画布像素大小
-                // 相对比例 = 实际距离 / 电子围栏设定半径
+                // 等比例换算：缩放因子 = 画布最大像素半径 / 实际电子围栏米数半径
                 const scale = maxMapRadius / radius;
+                
+                // 计算工人在 Canvas 上的横纵坐标像素值
                 const ptX = cx + (worker.relX * scale);
-                const ptY = cy + (worker.relY * scale); // 北向为负，南向为正
+                const ptY = cy - (worker.relY * scale); // 在经纬度中，北纬增加向上，而Canvas的Y轴向下，所以用减
 
-                // 绘制工友点位
-                ctx.fillStyle = tradeColors[worker.trade];
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = tradeColors[worker.trade];
+                // 绘制发光人员圆点
+                ctx.fillStyle = tradeColors[worker.trade] || '#FFFFFF';
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = tradeColors[worker.trade] || '#FFFFFF';
                 ctx.beginPath();
-                ctx.arc(ptX, ptY, 6, 0, 2 * Math.PI);
+                ctx.arc(ptX, ptY, 5, 0, 2 * Math.PI);
                 ctx.fill();
                 
-                // 取消阴影，防止影响文字
+                // 关闭阴影避免污染文字
                 ctx.shadowBlur = 0;
 
-                // 在点位旁侧标注姓名缩写/名字
-                ctx.fillStyle = '#94A3B8';
+                // 标上姓名
+                ctx.fillStyle = '#CBD5E1';
                 ctx.font = '9px sans-serif';
-                ctx.fillText(worker.name, ptX + 8, ptY + 3);
+                ctx.fillText(worker.name, ptX + 7, ptY + 3);
             });
 
-            // 5. 底部传统的工种柱状图一并刷新
-            const tradeCounts = {};
-            uniqueTrades.forEach(t => { tradeCounts[t] = workers.filter(w => w.trade === t).length; });
-
+            // 5. 底部传统柱状图刷新
             const ctxTrades = document.getElementById('chartTrades').getContext('2d');
             if(tradeChartInstance) tradeChartInstance.destroy();
             tradeChartInstance = new Chart(ctxTrades, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(tradeCounts),
+                    labels: uniqueTrades,
                     datasets: [{
-                        data: Object.values(tradeCounts),
-                        backgroundColor: Object.keys(tradeCounts).map(t => tradeColors[t]),
+                        data: Object.values(tradesSummary),
+                        backgroundColor: uniqueTrades.map(t => tradeColors[t]),
                         borderRadius: 4
                     }]
                 },
                 options: { 
                     responsive: true, 
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } 
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94A3B8' }, grid: { color: '#E2E8F0' } }, x: { ticks: { color: '#64748B' } } } 
                 }
             });
         }
 
+        /**
+         * 向后端 POST 新配置项
+         */
         function saveConfigToCloud() {
             const btn = document.getElementById('btnSave');
-            btn.innerText = "正在同步中...";
+            btn.innerText = "同步数据传输中...";
             btn.classList.add("opacity-70", "cursor-not-allowed");
+            
             const splitAndClean = (str) => str.replace(/，/g, ',').split(',').map(item => item.trim()).filter(item => item !== "");
 
             const payload = {
@@ -367,12 +363,13 @@
 
             fetch(API_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
             .then(() => {
-                alert("✅ 配置已成功更新至云端表格！");
+                alert("✅ 配置已成功下发！因谷歌流媒体事务机制，云端表格已安全同步。更新将在前端页面重新加载后完美体现。");
                 btn.innerText = "保存配置并同步至云端";
                 btn.classList.remove("opacity-70", "cursor-not-allowed");
+                loadCloudData(); // 保存完毕后，重新拉取一次刷新大屏
             })
-            .catch(() => {
-                alert("❌ 同步失败");
+            .catch(err => {
+                alert("❌ 同步失败，请检查网络。");
                 btn.innerText = "保存配置并同步至云端";
                 btn.classList.remove("opacity-70", "cursor-not-allowed");
             });
