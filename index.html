@@ -41,7 +41,7 @@
     <h2 id="t-title">J111 标段数字化考勤终端</h2>
     
     <div class="warning-box">
-        <p id="t-warning">🚨 重要提示：姓名、完整手机号与准证后4位是您核算工时的绝对依据！首次填写后系统将自动记忆，请务必核对无误，填错将导致下班无法闭环！</p>
+        <p id="t-warning">🚨 重要提示：姓名、完整手机号与准证后4位是您核算工时的绝对依据！系统会自动记忆，请务必确保准确，填错将导致下班无法闭环！</p>
     </div>
 
     <div class="form-group">
@@ -81,12 +81,11 @@
 </div>
 
 <script>
-    // CRITICAL: 替换为你真实的 API URL
+    // CRITICAL: 部署后务必将下方链接完整替换为您专属的 Web App 链接
     const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec";
     let geoConfig = { lat: 1.3521, lng: 103.8198, radius: 150 };
     let currentLang = 'zh';
 
-    // 完整的双语配置字典
     const i18n = {
         zh: {
             title: "J111 标段数字化考勤终端",
@@ -123,7 +122,7 @@
     };
 
     window.onload = function() {
-        // 1. 初始化并检测系统语言 (优先读取本地记忆，其次跟随系统)
+        // 1. 初始化并检测系统语言 (优先读取本地记忆，其次跟随工友系统)
         const savedLang = localStorage.getItem('j111_lang');
         const sysLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
         setLanguage(savedLang || sysLang);
@@ -136,17 +135,12 @@
         fetchOptions();
     };
 
-    // 核心语言切换器
     function setLanguage(lang) {
-        currentLang = lang;
-        localStorage.setItem('j111_lang', lang);
-        
-        // 更新按钮UI状态
+        currentLang = lang; localStorage.setItem('j111_lang', lang);
         document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
         document.getElementById('lang-en').classList.toggle('active', lang === 'en');
         document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
 
-        // 注入字典文本
         const t = i18n[lang];
         document.getElementById('t-title').innerText = t.title;
         document.getElementById('t-warning').innerText = t.warning;
@@ -171,17 +165,13 @@
 
     function fetchOptions() {
         document.getElementById('status').innerText = i18n[currentLang].statusPull;
-        fetch(API_URL)
-        .then(res => res.json())
-        .then(res => {
+        fetch(API_URL).then(res => res.json()).then(res => {
             geoConfig = res.config;
             buildSelect('trade', res.options.trades);
             buildSelect('area', res.options.areas);
             buildSelect('supervisor', res.options.supervisors);
             document.getElementById('status').innerText = `${i18n[currentLang].statusOk}${geoConfig.radius}m`;
-        }).catch(err => {
-            document.getElementById('status').innerText = i18n[currentLang].statusErr;
-        });
+        }).catch(err => { document.getElementById('status').innerText = i18n[currentLang].statusErr; });
     }
 
     function buildSelect(id, list) {
@@ -190,9 +180,9 @@
     }
 
     function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000; const dLat = (lat2-lat1) * Math.PI / 180; const dLon = (lon2-lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const p = 0.017453292519943295; const c = Math.cos;
+        const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
+        return 12742000 * Math.asin(Math.sqrt(a));
     }
 
     function handleSubmit(action) {
@@ -203,7 +193,6 @@
         
         if(!name || !phone || fin.length !== 4) { alert(t.alertInput); return; }
         
-        // 固化并存储本地记忆
         localStorage.setItem('j111_name', name);
         localStorage.setItem('j111_phone', phone);
         localStorage.setItem('j111_fin', fin);
@@ -211,31 +200,30 @@
         document.getElementById('status').innerText = t.statusGeo;
         
         navigator.geolocation.getCurrentPosition(position => {
-            const uLat = position.coords.latitude; const uLng = position.coords.longitude;
-            const distance = getDistance(uLat, uLng, geoConfig.lat, geoConfig.lng);
-            
+            const distance = getDistance(position.coords.latitude, position.coords.longitude, geoConfig.lat, geoConfig.lng);
+            if (distance > geoConfig.radius) {
+                alert(`${action==='checkin'?'Check-In':'Check-Out'} Failed! Outside boundary. Distance: ${Math.round(distance)}m`);
+                fetchOptions(); return;
+            }
+
             const payload = {
                 action: action, name: name, phone: phone, fin: fin,
                 trade: document.getElementById('trade').value, area: document.getElementById('area').value,
                 supervisor: document.getElementById('supervisor').value, content: document.getElementById('content').value,
-                lat: uLat, lng: uLng, distance: distance, siteRadius: geoConfig.radius,
+                lat: position.coords.latitude, lng: position.coords.longitude, distance: distance, siteRadius: geoConfig.radius,
                 deviceId: navigator.userAgent.replace(/[^a-zA-Z0-9]/g, "").substring(0,20)
             };
 
             document.getElementById('status').innerText = t.statusSync;
             
             fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(res => res.json())
-            .then(res => {
+            .then(res => res.json()).then(res => {
                 if(res.status === 'success') { alert(t.succOk); } 
                 else if(res.status === 'updated') { alert(`${t.succUpd}${res.time}`); } 
                 else if(res.status === 'rejected') { alert(`❌ ${res.msg}`); }
                 fetchOptions();
             });
-        }, err => {
-            alert(t.geoFail);
-            document.getElementById('status').innerText = t.geoFail;
-        }, { enableHighAccuracy: true, timeout: 10000 });
+        }, err => { alert(t.geoFail); document.getElementById('status').innerText = t.geoFail; }, { enableHighAccuracy: true, timeout: 10000 });
     }
 </script>
 </body>
