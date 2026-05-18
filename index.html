@@ -1,144 +1,242 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J111 现场智能考勤端</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>input, select, textarea { font-size: 16px !important; }</style>
+    <title>J111项目智能数字打卡终端</title>
+    <style>
+        :root { --primary: #0071e3; --warning: #ff453a; --bg: #f5f5f7; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background: var(--bg); padding: 16px; color: #1d1d1f; }
+        .header-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+        .lang-switch { background: #e5e5ea; border-radius: 20px; padding: 4px; display: flex; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .lang-opt { padding: 4px 12px; border-radius: 16px; color: #86868b; transition: 0.3s; }
+        .lang-opt.active { background: white; color: #1d1d1f; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 20px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 16px; }
+        h2 { font-size: 20px; margin-bottom: 12px; font-weight: 600; text-align: center; }
+        .warning-box { background: rgba(255,69,58,0.08); border: 1px solid var(--warning); padding: 12px; border-radius: 12px; margin-bottom: 16px; }
+        .warning-box p { color: var(--warning); font-size: 13px; font-weight: bold; line-height: 1.5; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #86868b; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 15px; background: #fafafa; outline: none; }
+        input:focus, select:focus { border-color: var(--primary); background: #fff; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        button { padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; transition: 0.2s; }
+        .btn-in { background: #34c759; }
+        .btn-out { background: var(--primary); }
+        button:active { opacity: 0.8; transform: scale(0.98); }
+        #status { font-size: 13px; text-align: center; color: #86868b; margin-top: 10px; line-height: 1.4; }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col justify-center items-center p-4 font-sans">
+<body>
 
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
-            <h1 id="appTitle" class="text-xl font-bold tracking-wider">J111 项目签到</h1>
-            <select id="langSelect" onchange="switchLanguage()" class="bg-blue-700 text-white text-sm rounded px-2 py-1 outline-none">
-                <option value="zh">中文</option><option value="en">English</option><option value="bn">বাংলা</option>
-            </select>
-        </div>
+<div class="header-bar">
+    <div class="lang-switch">
+        <div class="lang-opt" id="lang-zh" onclick="setLanguage('zh')">中文</div>
+        <div class="lang-opt" id="lang-en" onclick="setLanguage('en')">English</div>
+    </div>
+</div>
 
-        <div class="p-6">
-            <div class="text-center mb-6 bg-gray-100 py-3 rounded-lg border border-gray-200">
-                <p id="dateDisplay" class="text-gray-500 text-sm">同步新加坡时间...</p>
-                <p id="timeDisplay" class="text-3xl font-mono font-bold text-gray-800 mt-1">--:--:--</p>
-                <p class="text-[10px] text-gray-400 mt-1">设备识别号: <span id="deviceShow">--</span></p>
-            </div>
-
-            <form id="attendanceForm" class="space-y-4">
-                <div><label id="labelName" class="block text-sm font-medium text-gray-700 mb-1">姓名</label><input type="text" id="workerName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
-                <div><label id="labelFin" class="block text-sm font-medium text-gray-700 mb-1">准证后四位</label><input type="text" id="workerFin" maxlength="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg uppercase focus:ring-2 focus:ring-blue-500"></div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label id="labelTrade" class="block text-sm font-medium text-gray-700 mb-1">工种</label><select id="workerTrade" required class="w-full px-4 py-2 border rounded-lg bg-white"></select></div>
-                    <div><label id="labelArea" class="block text-sm font-medium text-gray-700 mb-1">区域</label><select id="workerArea" required class="w-full px-4 py-2 border rounded-lg bg-white"></select></div>
-                </div>
-                <div><label id="labelSupervisor" class="block text-sm font-medium text-gray-700 mb-1">负责督工</label><select id="workerSupervisor" required class="w-full px-4 py-2 border rounded-lg bg-white"></select></div>
-                <div><label id="labelContent" class="block text-sm font-medium text-gray-700 mb-1">工作内容</label><textarea id="workerContent" required rows="2" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"></textarea></div>
-
-                <div class="text-xs text-orange-600 bg-orange-50 p-2 rounded flex items-center border border-orange-100"><span id="gpsText">请确保已开启手机 GPS 定位服务。</span></div>
-
-                <div class="flex gap-4 pt-2">
-                    <button type="button" onclick="submitAttendance('checkin')" id="btnCheckIn" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">上班签到</button>
-                    <button type="button" onclick="submitAttendance('checkout')" id="btnCheckOut" class="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">下班签到</button>
-                </div>
-            </form>
-        </div>
+<div class="card">
+    <h2 id="t-title">J111 标段数字化考勤终端</h2>
+    
+    <div class="warning-box">
+        <p id="t-warning">🚨 重要提示：姓名、完整手机号与准证后4位是您核算工时的绝对依据！首次填写后系统将自动记忆，请务必核对无误，填错将导致下班无法闭环！</p>
     </div>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxQKD7AfUphbLQapj4CrCkvy7dlrgutGAi8hhAjw0eCdl2w8iSSQfVcwd7253eBB_f_/exec"; // 必须替换为新的部署链接
-        let siteLat, siteLng, siteRadius;
+    <div class="form-group">
+        <label id="t-lblName">员工姓名 (Full Name as per WP)</label>
+        <input type="text" id="name" placeholder="">
+    </div>
+    <div class="form-group">
+        <label id="t-lblPhone">完整手机号码 (Singapore Mobile Number)</label>
+        <input type="tel" id="phone" placeholder="">
+    </div>
+    <div class="form-group">
+        <label id="t-lblFin">准证号码最后四位 (Work Permit Last 4 Characters)</label>
+        <input type="text" id="fin" placeholder="">
+    </div>
+    <div class="form-group">
+        <label id="t-lblTrade">所属工种 (Trade Type)</label>
+        <select id="trade"><option value="">...</option></select>
+    </div>
+    <div class="form-group">
+        <label id="t-lblArea">当前作业区域 (Current Work Area)</label>
+        <select id="area"><option value="">...</option></select>
+    </div>
+    <div class="form-group">
+        <label id="t-lblSupervisor">现场直接督工 (Site Supervisor)</label>
+        <select id="supervisor"><option value="">...</option></select>
+    </div>
+    <div class="form-group">
+        <label id="t-lblContent">今日具体工作内容摘要 (Work Content)</label>
+        <input type="text" id="content" placeholder="">
+    </div>
+
+    <div class="btn-grid">
+        <button class="btn-in" id="t-btnIn" onclick="handleSubmit('checkin')">上班签到</button>
+        <button class="btn-out" id="t-btnOut" onclick="handleSubmit('checkout')">下班签退</button>
+    </div>
+    <p id="status">...</p>
+</div>
+
+<script>
+    // CRITICAL: 替换为你真实的 API URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec";
+    let geoConfig = { lat: 1.3521, lng: 103.8198, radius: 150 };
+    let currentLang = 'zh';
+
+    // 完整的双语配置字典
+    const i18n = {
+        zh: {
+            title: "J111 标段数字化考勤终端",
+            warning: "🚨 重要提示：姓名、完整手机号与准证后4位是您核算工时的绝对依据！系统会自动记忆，请务必确保准确，填错将导致下班无法闭环！",
+            lblName: "员工姓名 (Full Name as per WP)", plhName: "请输入您的英文全名（自动记忆）",
+            lblPhone: "完整手机号码 (Singapore Mobile Number)", plhPhone: "请输入8位本地完整手机号",
+            lblFin: "准证号码最后四位 (FIN Last 4)", plhFin: "例如: 123A, 567B",
+            lblTrade: "所属工种 (Trade Type)", lblArea: "当前作业区域 (Current Work Area)",
+            lblSupervisor: "现场直接督工 (Site Supervisor)", lblContent: "今日具体工作内容摘要 (Work Content)", plhContent: "例: Precast segment installation",
+            btnIn: "上班签到 (Check-In)", btnOut: "下班签退 (Check-Out)",
+            statusInit: "系统初始化中...", statusPull: "正在拉取项目最新布控参数...",
+            statusOk: "已成功连接云端。当前考勤围栏半径：", statusErr: "⚠️ 无法连接云端引擎，请确认网络。",
+            alertInput: "🚨 请必须完整填写英文姓名、手机号码、及标准的4位准证字符！",
+            statusGeo: "正在获取卫星高精度定位...", statusSync: "考勤数据正在同步至云端...",
+            geoFail: "🚨 卫星定位获取失败，请确保手机 GPS 已打开并授权网页定位！",
+            succOk: "✅ 操作成功！打卡已被云端精确捕获并归档。", succUpd: "🔄 修正成功！系统检测到高频误触，已自动覆盖最新时间："
+        },
+        en: {
+            title: "J111 Digital Attendance Terminal",
+            warning: "🚨 IMPORTANT: Your Name, Phone Number, and FIN (Last 4) are strictly required for your timesheet! The system will auto-save them. Please ensure accuracy to avoid unclosed shifts!",
+            lblName: "Full Name (as per WP)", plhName: "Enter your full name (Auto-saved)",
+            lblPhone: "Mobile Number", plhPhone: "Enter 8-digit local mobile number",
+            lblFin: "FIN Last 4 Characters", plhFin: "e.g., 123A, 567B",
+            lblTrade: "Trade Type", lblArea: "Current Work Area",
+            lblSupervisor: "Site Supervisor", lblContent: "Work Content Summary", plhContent: "e.g., Precast segment installation",
+            btnIn: "Check-In", btnOut: "Check-Out",
+            statusInit: "System initializing...", statusPull: "Fetching latest project parameters...",
+            statusOk: "Connected to cloud. Geofence radius: ", statusErr: "⚠️ Failed to connect to cloud engine.",
+            alertInput: "🚨 Please completely fill in your full name, phone number, and 4-character FIN!",
+            statusGeo: "Acquiring high-precision GPS...", statusSync: "Syncing attendance data to cloud...",
+            geoFail: "🚨 GPS acquisition failed. Please turn on your location services!",
+            succOk: "✅ Success! Attendance recorded in the cloud.", succUpd: "🔄 Updated! High-frequency operation detected. Time updated to: "
+        }
+    };
+
+    window.onload = function() {
+        // 1. 初始化并检测系统语言 (优先读取本地记忆，其次跟随系统)
+        const savedLang = localStorage.getItem('j111_lang');
+        const sysLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
+        setLanguage(savedLang || sysLang);
+
+        // 2. 读取输入框指纹记忆
+        if(localStorage.getItem('j111_name')) document.getElementById('name').value = localStorage.getItem('j111_name');
+        if(localStorage.getItem('j111_phone')) document.getElementById('phone').value = localStorage.getItem('j111_phone');
+        if(localStorage.getItem('j111_fin')) document.getElementById('fin').value = localStorage.getItem('j111_fin');
         
-        let deviceUuid = localStorage.getItem('j111_device_uuid');
-        if (!deviceUuid) {
-            deviceUuid = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-            localStorage.setItem('j111_device_uuid', deviceUuid);
-        }
-        document.getElementById('deviceShow').innerText = deviceUuid;
+        fetchOptions();
+    };
 
-        const i18n = {
-            zh: { title: "J111 项目签到", name: "姓名", fin: "准证后四位 (FIN)", trade: "工种", area: "工作区域", supervisor: "负责领导 / 督工", content: "今日工作内容", gpsWarning: "请确保已开启手机 GPS 定位服务。", checkIn: "上班签到", checkOut: "下班签到", success: "考勤已成功记录！", outWall: "无法签到：不在工地范围内！距离: ", syncing: "同步中..." },
-            en: { title: "J111 Attendance", name: "Name", fin: "FIN Last 4", trade: "Trade", area: "Area", supervisor: "Supervisor", content: "Task", gpsWarning: "Ensure Phone GPS is ON.", checkIn: "Check In", checkOut: "Check Out", success: "Attendance recorded!", outWall: "Failed: Outside boundary. Distance: ", syncing: "Syncing..." }
-        };
-
-        let currentLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
+    // 核心语言切换器
+    function setLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem('j111_lang', lang);
         
-        function switchLanguage() {
-            currentLang = document.getElementById('langSelect').value;
-            const dict = i18n[currentLang];
-            document.getElementById('appTitle').innerText = dict.title;
-            document.getElementById('labelName').innerText = dict.name;
-            document.getElementById('labelFin').innerText = dict.fin;
-            document.getElementById('labelTrade').innerText = dict.trade;
-            document.getElementById('labelArea').innerText = dict.area;
-            document.getElementById('labelSupervisor').innerText = dict.supervisor;
-            document.getElementById('labelContent').innerText = dict.content;
-            document.getElementById('gpsText').innerText = dict.gpsWarning;
-            document.getElementById('btnCheckIn').innerText = dict.checkIn;
-            document.getElementById('btnCheckOut').innerText = dict.checkOut;
+        // 更新按钮UI状态
+        document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+        document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+
+        // 注入字典文本
+        const t = i18n[lang];
+        document.getElementById('t-title').innerText = t.title;
+        document.getElementById('t-warning').innerText = t.warning;
+        document.getElementById('t-lblName').innerText = t.lblName;
+        document.getElementById('name').placeholder = t.plhName;
+        document.getElementById('t-lblPhone').innerText = t.lblPhone;
+        document.getElementById('phone').placeholder = t.plhPhone;
+        document.getElementById('t-lblFin').innerText = t.lblFin;
+        document.getElementById('fin').placeholder = t.plhFin;
+        document.getElementById('t-lblTrade').innerText = t.lblTrade;
+        document.getElementById('t-lblArea').innerText = t.lblArea;
+        document.getElementById('t-lblSupervisor').innerText = t.lblSupervisor;
+        document.getElementById('t-lblContent').innerText = t.lblContent;
+        document.getElementById('content').placeholder = t.plhContent;
+        document.getElementById('t-btnIn').innerText = t.btnIn;
+        document.getElementById('t-btnOut').innerText = t.btnOut;
+        
+        if (document.getElementById('status').innerText.includes("...")) {
+            document.getElementById('status').innerText = t.statusInit;
         }
+    }
 
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('dateDisplay').innerText = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Singapore', dateStyle: 'full' }).format(now);
-            document.getElementById('timeDisplay').innerText = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Singapore', timeStyle: 'medium', hour12: false }).format(now);
-        }, 1000);
+    function fetchOptions() {
+        document.getElementById('status').innerText = i18n[currentLang].statusPull;
+        fetch(API_URL)
+        .then(res => res.json())
+        .then(res => {
+            geoConfig = res.config;
+            buildSelect('trade', res.options.trades);
+            buildSelect('area', res.options.areas);
+            buildSelect('supervisor', res.options.supervisors);
+            document.getElementById('status').innerText = `${i18n[currentLang].statusOk}${geoConfig.radius}m`;
+        }).catch(err => {
+            document.getElementById('status').innerText = i18n[currentLang].statusErr;
+        });
+    }
 
-        window.onload = function() {
-            switchLanguage();
-            fetch(API_URL).then(res => res.json()).then(data => {
-                siteLat = data.config.lat; siteLng = data.config.lng; siteRadius = data.config.radius;
-                const fillSel = (id, arr) => {
-                    const el = document.getElementById(id); el.innerHTML = `<option value="" disabled selected>选择...</option>`;
-                    arr.forEach(i => el.options.add(new Option(i, i)));
-                };
-                fillSel('workerTrade', data.options.trades); fillSel('workerArea', data.options.areas); fillSel('workerSupervisor', data.options.supervisors);
-            });
-        };
+    function buildSelect(id, list) {
+        const el = document.getElementById(id); el.innerHTML = "";
+        list.forEach(i => { const opt = document.createElement('option'); opt.value = i; opt.innerText = i; el.appendChild(opt); });
+    }
 
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const p = 0.017453292519943295; const c = Math.cos;
-            const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
-            return 12742000 * Math.asin(Math.sqrt(a)); 
-        }
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000; const dLat = (lat2-lat1) * Math.PI / 180; const dLon = (lon2-lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
 
-        function submitAttendance(actionType) {
-            const form = document.getElementById('attendanceForm');
-            if(!form.checkValidity()) { form.reportValidity(); return; }
-            if (!navigator.geolocation) { alert("GPS Unsupported"); return; }
+    function handleSubmit(action) {
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const fin = document.getElementById('fin').value.trim().toUpperCase();
+        const t = i18n[currentLang];
+        
+        if(!name || !phone || fin.length !== 4) { alert(t.alertInput); return; }
+        
+        // 固化并存储本地记忆
+        localStorage.setItem('j111_name', name);
+        localStorage.setItem('j111_phone', phone);
+        localStorage.setItem('j111_fin', fin);
+
+        document.getElementById('status').innerText = t.statusGeo;
+        
+        navigator.geolocation.getCurrentPosition(position => {
+            const uLat = position.coords.latitude; const uLng = position.coords.longitude;
+            const distance = getDistance(uLat, uLng, geoConfig.lat, geoConfig.lng);
             
-            const btn = actionType === 'checkin' ? document.getElementById('btnCheckIn') : document.getElementById('btnCheckOut');
-            const originalText = btn.innerText;
-            btn.innerText = i18n[currentLang].syncing; btn.disabled = true;
+            const payload = {
+                action: action, name: name, phone: phone, fin: fin,
+                trade: document.getElementById('trade').value, area: document.getElementById('area').value,
+                supervisor: document.getElementById('supervisor').value, content: document.getElementById('content').value,
+                lat: uLat, lng: uLng, distance: distance, siteRadius: geoConfig.radius,
+                deviceId: navigator.userAgent.replace(/[^a-zA-Z0-9]/g, "").substring(0,20)
+            };
 
-            navigator.geolocation.getCurrentPosition(pos => {
-                const distance = getDistance(pos.coords.latitude, pos.coords.longitude, siteLat, siteLng);
-                if (distance > siteRadius) {
-                    alert(i18n[currentLang].outWall + Math.round(distance) + "m (Max: " + siteRadius + "m)");
-                    btn.innerText = originalText; btn.disabled = false; return;
-                }
-
-                const payload = {
-                    action: actionType, name: document.getElementById('workerName').value.trim(),
-                    fin: document.getElementById('workerFin').value.toUpperCase().trim(),
-                    trade: document.getElementById('workerTrade').value, area: document.getElementById('workerArea').value,
-                    supervisor: document.getElementById('workerSupervisor').value, content: document.getElementById('workerContent').value.trim(),
-                    lat: pos.coords.latitude, lng: pos.coords.longitude, distance: distance, siteRadius: siteRadius, deviceId: deviceUuid
-                };
-
-                // 核心更新：使用标准 text/plain 防止 CORS 拦截，且能读取真实状态
-                fetch(API_URL, { 
-                    method: "POST", 
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(payload) 
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'success') { alert(i18n[currentLang].success); form.reset(); switchLanguage(); }
-                })
-                .catch(err => alert("网络错误，请稍后重试！"))
-                .finally(() => { btn.innerText = originalText; btn.disabled = false; });
-            }, err => { alert("无法获取GPS定位"); btn.innerText = originalText; btn.disabled = false; }, { enableHighAccuracy: true, timeout: 8000 });
-        }
-    </script>
+            document.getElementById('status').innerText = t.statusSync;
+            
+            fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') { alert(t.succOk); } 
+                else if(res.status === 'updated') { alert(`${t.succUpd}${res.time}`); } 
+                else if(res.status === 'rejected') { alert(`❌ ${res.msg}`); }
+                fetchOptions();
+            });
+        }, err => {
+            alert(t.geoFail);
+            document.getElementById('status').innerText = t.geoFail;
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+</script>
 </body>
 </html>
