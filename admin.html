@@ -1,194 +1,203 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J111 智能核心后台管理</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>J111项目中枢考勤实时监控与智能布控沙盘</title>
+    <style>
+        :root { --dark: #1d1d1f; --panel: #ffffff; --border: #d2d2d7; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        body { background: #f5f5f7; display: flex; height: 100vh; color: var(--dark); overflow: hidden; }
+        #sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; z-index: 10; }
+        #map-container { flex: 1; position: relative; background: #e5e5ea; cursor: grab; overflow: hidden; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        h3 { margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #0071e3; padding-bottom: 6px; }
+        .stat-card { background: #fafafa; border: 1px solid var(--border); padding: 12px; border-radius: 10px; margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-item { font-size: 13px; font-weight: 500; }
+        .stat-item span { font-size: 16px; font-weight: bold; color: #0071e3; display: block; }
+        textarea { width: 100%; height: 80px; font-size: 12px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); resize: none; margin-bottom: 10px; }
+        .btn { background: #0071e3; color: white; padding: 10px; border: none; width: 100%; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .tabs { display: flex; margin-bottom: 15px; background: #eee; padding: 2px; border-radius: 8px; }
+        .tab { flex: 1; text-align: center; padding: 6px; font-size: 13px; cursor: pointer; border-radius: 6px; }
+        .tab.active { background: white; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-panel { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
+        .tab-panel.active { display: flex; }
+        .history-row { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 md:p-6 flex items-center justify-center">
+<body>
 
-    <div id="loginOverlay" class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
-        <h2 class="text-xl font-bold text-gray-800 text-center mb-4">🔒 J111 考勤中枢授权</h2>
-        <input type="password" id="inputPassword" placeholder="输入控制台密码" class="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-gray-800">
-        <button onclick="verifyAdmin()" class="w-full bg-gray-800 text-white py-2.5 rounded-lg font-bold shadow">进入控制台</button>
+<div id="sidebar">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('realtime')">实时动态</div>
+        <div class="tab" onclick="switchTab('history-tab')">历史穿透对账</div>
+        <div class="tab" onclick="switchTab('config-tab')">围栏控标调整</div>
     </div>
 
-    <div id="adminContent" class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden hidden">
-        <div class="bg-slate-800 p-5 text-white flex justify-between items-center">
-            <h1 class="text-lg font-bold">⚙️ J111 数字化考勤大屏系统</h1>
-            <button onclick="location.reload()" class="text-xs bg-slate-700 px-3 py-1.5 rounded hover:bg-slate-600 transition">🔄 刷新数据</button>
+    <div id="realtime" class="tab-panel active">
+        <h3>📊 动态生产看板 (07:00滚动)</h3>
+        <div class="stat-card">
+            <div class="stat-item">当前在场总人数<span id="lbl-inside">0</span></div>
+            <div class="stat-item">今日开卡总人数<span id="lbl-active">0</span></div>
+            <div class="stat-item">标准白班闭环<span id="lbl-day">0</span></div>
+            <div class="stat-item">常规加班闭环<span id="lbl-over">0</span></div>
+            <div class="stat-item">再次进场抢修<span id="lbl-extra">0</span></div>
+            <div class="stat-item">跨天夜班闭环<span id="lbl-night">0</span></div>
         </div>
-
-        <div class="flex border-b bg-slate-50">
-            <button onclick="switchTab('board')" id="tab-board" class="flex-1 py-3 text-center font-bold text-slate-800 border-b-2 border-slate-800 text-sm">📊 班次数据看板</button>
-            <button onclick="switchTab('radar')" id="tab-radar" class="flex-1 py-3 text-center font-medium text-slate-500 text-sm">🛰️ 现场实时布控图</button>
-            <button onclick="switchTab('cfg')" id="tab-cfg" class="flex-1 py-3 text-center font-medium text-slate-500 text-sm">⚙️ 考勤规则与配置</button>
-        </div>
-
-        <div class="p-6">
-            <div id="sec-board" class="space-y-6">
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-200"><p class="text-[11px] text-blue-600 font-medium">白班完成闭环</p><p id="cnt-day" class="text-xl font-bold text-blue-900 mt-1">-- 人</p></div>
-                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-200"><p class="text-[11px] text-amber-600 font-medium">常规加班闭环</p><p id="cnt-ot" class="text-xl font-bold text-amber-900 mt-1">-- 人</p></div>
-                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200"><p class="text-[11px] text-emerald-600 font-medium">白天无记录特班</p><p id="cnt-special" class="text-xl font-bold text-emerald-900 mt-1">-- 人</p></div>
-                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200"><p class="text-[11px] text-indigo-600 font-medium">再次上班闭环</p><p id="cnt-re" class="text-xl font-bold text-indigo-900 mt-1">-- 人</p></div>
-                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-200"><p class="text-[11px] text-purple-600 font-medium">晚班/夜班闭环</p><p id="cnt-night" class="text-xl font-bold text-purple-900 mt-1">-- 人</p></div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h3 class="text-xs font-bold text-slate-600 mb-3 text-center">今日到场各工种总人数汇总</h3>
-                    <canvas id="chartSummary" class="max-h-48"></canvas>
-                </div>
-            </div>
-
-            <div id="sec-radar" class="space-y-4 hidden flex flex-col items-center">
-                <div class="w-full flex justify-between text-xs text-slate-500"><span id="lbl-total">当前在场总人数: --人</span><span>圆心为工地基准坐标点</span></div>
-                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 shadow-2xl relative"><canvas id="siteMapCanvas" width="300" height="300"></canvas></div>
-                <div id="jobLegendContainer" class="w-full grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-2"></div>
-            </div>
-
-            <div id="sec-cfg" class="space-y-6 hidden">
-                <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-4">
-                    <h3 class="text-xs font-bold text-blue-700">📍 地理围栏参数</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div><label class="text-xs font-medium text-slate-600">中心纬度</label><input type="text" id="cfgLat" class="w-full px-3 py-1.5 border rounded text-sm mt-1"></div>
-                        <div><label class="text-xs font-medium text-slate-600">中心经度</label><input type="text" id="cfgLng" class="w-full px-3 py-1.5 border rounded text-sm mt-1"></div>
-                        <div><label class="text-xs font-medium text-slate-600">围栏半径(米)</label><input type="number" id="cfgRadius" class="w-full px-3 py-1.5 border rounded text-sm mt-1"></div>
-                    </div>
-                </div>
-
-                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 space-y-4">
-                    <h3 class="text-xs font-bold text-emerald-700">⏱️ 签到时间规则与阈值设定</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div><label class="text-xs font-medium text-slate-600">标准白班上班</label><input type="text" id="cfgStdIn" placeholder="如 08:00" class="w-full px-3 py-1.5 border rounded text-sm mt-1"></div>
-                        <div><label class="text-xs font-medium text-slate-600">标准白班下班</label><input type="text" id="cfgStdOut" placeholder="如 17:00" class="w-full px-3 py-1.5 border rounded text-sm mt-1"></div>
-                        <div><label class="text-xs font-medium text-slate-600">迟到/早退缓冲(分钟)</label><input type="number" id="cfgBufferMin" placeholder="如 15" class="w-full px-3 py-1.5 border rounded text-sm mt-1"></div>
-                    </div>
-                </div>
-
-                <div class="space-y-3 bg-amber-50 p-4 rounded-xl border border-amber-200">
-                    <h3 class="text-xs font-bold text-amber-700">📋 下拉单选项目管理</h3>
-                    <div><label class="text-xs font-medium text-slate-700">允许工种列表 (逗号隔开)</label><textarea id="listTrades" rows="2" class="w-full px-3 py-2 border rounded text-sm mt-1"></textarea></div>
-                    <div><label class="text-xs font-medium text-slate-700">工作区域划分 (逗号隔开)</label><textarea id="listAreas" rows="2" class="w-full px-3 py-2 border rounded text-sm mt-1"></textarea></div>
-                    <div><label class="text-xs font-medium text-slate-700">负责督工列表 (逗号隔开)</label><textarea id="listSupervisors" rows="2" class="w-full px-3 py-2 border rounded text-sm mt-1"></textarea></div>
-                </div>
-                <button onclick="saveConfigToCloud()" id="btnSave" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow transition">下发规则并强制同步</button>
-            </div>
-        </div>
+        <h3>👷 实时工种配属精细分布</h3>
+        <div id="trade-list" style="font-size:13px; line-height: 1.8;"></div>
     </div>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxQKD7AfUphbLQapj4CrCkvy7dlrgutGAi8hhAjw0eCdl2w8iSSQfVcwd7253eBB_f_/exec"; // 必须替换为新部署链接
-        let barChart = null;
+    <div id="history-tab" class="tab-panel">
+        <h3>📂 30天生产归档清算日志 (每天07点固化)</h3>
+        <div id="history-list" style="overflow-y:auto; flex:1;"></div>
+    </div>
 
-        function verifyAdmin() {
-            if(document.getElementById('inputPassword').value === "J111Admin2026") {
-                document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('adminContent').classList.remove('hidden');
-                document.body.classList.remove('flex','items-center');
-                loadCloudData();
+    <div id="config-tab" class="tab-panel">
+        <h3>⚙️ 项目核心电子围栏矩阵</h3>
+        <label style="font-size:12px;">中心锚点经度 / 纬度</label>
+        <div style="display:flex; gap:5px; margin-bottom:8px;">
+            <input type="number" id="cfg-lat" step="0.000001" style="width:50%; padding:6px;">
+            <input type="number" id="cfg-lng" step="0.000001" style="width:50%; padding:6px;">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px;">现场控标围栏半径(米)</label>
+            <input type="number" id="cfg-radius" style="width:100%; padding:6px;">
+        </div>
+        <div style="display:flex; gap:5px; margin-bottom:8px;">
+            <div><label style="font-size:11px;">标准白班开始</label><input type="text" id="cfg-stdin" style="width:100%; padding:4px;"></div>
+            <div><label style="font-size:11px;">标准白班截止</label><input type="text" id="cfg-stdout" style="width:100%; padding:4px;"></div>
+        </div>
+        <div style="display:flex; gap:5px; margin-bottom:15px;">
+            <div><label style="font-size:11px;">弹性缓冲(分钟)</label><input type="number" id="cfg-buffer" style="width:100%; padding:4px;"></div>
+            <div><label style="font-size:11px;">加班门槛起算(分钟)</label><input type="number" id="cfg-rounding" style="width:100%; padding:4px;"></div>
+        </div>
+        <h3>📋 现场控制数据字典字典（换行输入）</h3>
+        <label style="font-size:12px;">可用工种列表</label><textarea id="txt-trades"></textarea>
+        <label style="font-size:12px;">控标作业区域</label><textarea id="txt-areas"></textarea>
+        <label style="font-size:12px;">授权督工名单</label><textarea id="txt-supervisors"></textarea>
+        <button class="btn" onclick="saveConfig()">一键部署并同步云端锁</button>
+    </div>
+</div>
+
+<div id="map-container">
+    <canvas id="sandBoxMap"></canvas>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec";
+    let workers = []; let configBlob = {};
+    const canvas = document.getElementById('sandBoxMap'); const ctx = canvas.getContext('2d');
+    let scale = 1.0; let offsetX = 0; let offsetY = 0; let isDragging = false; let startX, startY;
+
+    window.onload = function() {
+        resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+        initMapInteractions();
+        pollCloudEngine();
+        setInterval(pollCloudEngine, 30000); // 30秒高频刷新画布与监控
+    };
+
+    function resizeCanvas() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; drawSandbox(); }
+
+    function switchTab(id) {
+        document.querySelectorAll('.tab, .tab-panel').forEach(el => el.classList.remove('active'));
+        event.target.classList.add('active'); document.getElementById(id).classList.add('active');
+    }
+
+    function pollCloudEngine() {
+        fetch(API_URL).then(res => res.json()).then(res => {
+            configBlob = res.config; workers = res.analytics.workers;
+            
+            // 回填看板
+            document.getElementById('lbl-inside').innerText = res.analytics.total;
+            document.getElementById('lbl-active').innerText = res.analytics.stats.totalActive;
+            document.getElementById('lbl-day').innerText = res.analytics.stats.dayClosed;
+            document.getElementById('lbl-over').innerText = res.analytics.stats.overClosed;
+            document.getElementById('lbl-extra').innerText = res.analytics.stats.extraClosed;
+            document.getElementById('lbl-night').innerText = res.analytics.stats.nightClosed;
+            
+            // 回填工种统计
+            let tHtml = ""; for(let t in res.analytics.stats.tradeDetails) { tHtml += `🔹 ${t}: <b>${res.analytics.stats.tradeDetails[t]}</b> 人<br>`; }
+            document.getElementById('trade-list').innerHTML = tHtml || "暂无人员进场";
+
+            // 回填参数
+            document.getElementById('cfg-lat').value = configBlob.lat; document.getElementById('cfg-lng').value = configBlob.lng;
+            document.getElementById('cfg-radius').value = configBlob.radius; document.getElementById('cfg-stdin').value = configBlob.stdIn;
+            document.getElementById('cfg-stdout').value = configBlob.stdOut; document.getElementById('cfg-buffer').value = configBlob.bufferMin;
+            document.getElementById('cfg-rounding').value = configBlob.roundingMin;
+
+            document.getElementById('txt-trades').value = res.options.trades.join("\n");
+            document.getElementById('txt-areas').value = res.options.areas.join("\n");
+            document.getElementById('txt-supervisors').value = res.options.supervisors.join("\n");
+
+            // 回填历史
+            let hHtml = ""; res.analytics.history.forEach(h => {
+                hHtml += `<div class="history-row">📅 <b>${h.date.substring(0,10)}</b> | 当天出勤: ${h.total}人<br>⚡ 闭环拆分: ${h.closed}</div>`;
+            });
+            document.getElementById('history-list').innerHTML = hHtml || "暂无历史固化断代数据";
+
+            drawSandbox();
+        });
+    }
+
+    function initMapInteractions() {
+        const container = document.getElementById('map-container');
+        container.addEventListener('mousedown', e => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; container.style.cursor = 'grabbing'; });
+        window.addEventListener('mouseup', () => { isDragging = false; container.style.cursor = 'grab'; });
+        container.addEventListener('mousemove', e => { if (!isDragging) return; offsetX = e.clientX - startX; offsetY = e.clientY - startY; drawSandbox(); });
+        container.addEventListener('wheel', e => {
+            e.preventDefault(); const zoomFactor = 1.1;
+            if (e.deltaY < 0) scale *= zoomFactor; else scale /= zoomFactor;
+            scale = Math.min(Math.max(scale, 0.2), 10); drawSandbox();
+        }, { passive: false });
+    }
+
+    function drawSandbox() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
+        ctx.scale(scale, scale);
+
+        // 1. 绘制工地红线控标圈
+        ctx.beginPath(); ctx.arc(0, 0, configBlob.radius || 150, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(0, 113, 227, 0.04)'; ctx.fill();
+        ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+        // 绘制项目部几何锚点
+        ctx.fillStyle = '#ff453a'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 2 * Math.PI); ctx.fill();
+        ctx.fillStyle = '#1d1d1f'; ctx.font = '10px sans-serif'; ctx.fillText("J111 项目部中心锚点", 8, 3);
+
+        // 2. 高精渲染场内在场人员（缩减尺寸至3px，解决重叠臃肿，下班自动被擦除无影）
+        workers.forEach(w => {
+            ctx.fillStyle = 'rgba(52, 199, 89, 0.85)';
+            ctx.beginPath(); ctx.arc(w.relX, -w.relY, 3.5, 0, 2 * Math.PI); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+
+            ctx.fillStyle = '#1d1d1f'; ctx.font = '9px sans-serif';
+            ctx.fillText(`${w.name} (${w.trade})`, w.relX + 6, -w.relY + 3);
+        });
+
+        ctx.restore();
+    }
+
+    function saveConfig() {
+        const payload = {
+            action: 'updateConfig',
+            config: {
+                lat: parseFloat(document.getElementById('cfg-lat').value), lng: parseFloat(document.getElementById('cfg-lng').value),
+                radius: parseInt(document.getElementById('cfg-radius').value), stdIn: document.getElementById('cfg-stdin').value,
+                stdOut: document.getElementById('cfg-stdout').value, bufferMin: parseInt(document.getElementById('cfg-buffer').value),
+                roundingMin: parseInt(document.getElementById('cfg-rounding').value)
+            },
+            options: {
+                trades: document.getElementById('txt-trades').value.split("\n").filter(String),
+                areas: document.getElementById('txt-areas').value.split("\n").filter(String),
+                supervisors: document.getElementById('txt-supervisors').value.split("\n").filter(String)
             }
-        }
-
-        function switchTab(name) {
-            ['board', 'radar', 'cfg'].forEach(t => {
-                document.getElementById('sec-' + t).classList.add('hidden');
-                document.getElementById('tab-' + t).className = "flex-1 py-3 text-center font-medium text-slate-500 text-sm";
-            });
-            document.getElementById('sec-' + name).classList.remove('hidden');
-            document.getElementById('tab-' + name).className = "flex-1 py-3 text-center font-bold text-slate-800 border-b-2 border-slate-800 text-sm";
-        }
-
-        function loadCloudData() {
-            fetch(API_URL).then(res => res.json()).then(data => {
-                document.getElementById('cfgLat').value = data.config.lat;
-                document.getElementById('cfgLng').value = data.config.lng;
-                document.getElementById('cfgRadius').value = data.config.radius;
-                document.getElementById('cfgStdIn').value = data.config.stdIn || "08:00";
-                document.getElementById('cfgStdOut').value = data.config.stdOut || "17:00";
-                document.getElementById('cfgBufferMin').value = data.config.bufferMin || 0;
-                
-                document.getElementById('listTrades').value = data.options.trades.join(', ');
-                document.getElementById('listAreas').value = data.options.areas.join(', ');
-                document.getElementById('listSupervisors').value = data.options.supervisors.join(', ');
-
-                const s = data.analytics.stats;
-                document.getElementById('cnt-day').innerText = s.dayShiftClosed + " 人";
-                document.getElementById('cnt-ot').innerText = s.overtimeClosed + " 人";
-                document.getElementById('cnt-special').innerText = s.specialCaseCount + " 人";
-                document.getElementById('cnt-re').innerText = s.reWorkClosed + " 人";
-                document.getElementById('cnt-night').innerText = s.nightShiftClosed + " 人";
-
-                if(barChart) barChart.destroy();
-                barChart = new Chart(document.getElementById('chartSummary').getContext('2d'), {
-                    type: 'bar', data: { labels: Object.keys(s.tradeDetails), datasets: [{ data: Object.values(s.tradeDetails), backgroundColor: '#3B82F6', borderRadius: 4 }] },
-                    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                });
-                drawRadar(data.analytics.workers, data.config.radius);
-            });
-        }
-
-        function drawRadar(workers, radius) {
-            document.getElementById('lbl-total').innerText = "当前在场总人数: " + workers.length + " 人";
-            const canvas = document.getElementById('siteMapCanvas'); const ctx = canvas.getContext('2d');
-            const cx = canvas.width / 2; const cy = canvas.height / 2; const rMax = cx - 20;
-            ctx.clearRect(0,0,300,300);
-            
-            ctx.strokeStyle = '#334155'; ctx.beginPath(); ctx.arc(cx,cy,rMax,0,2*Math.PI); ctx.stroke();
-            ctx.fillStyle = '#0F172A'; ctx.fill();
-            ctx.beginPath(); ctx.arc(cx,cy,rMax*0.5,0,2*Math.PI); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx-rMax,cy); ctx.lineTo(cx+rMax,cy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx,cy-rMax); ctx.lineTo(cx,cy+rMax); ctx.stroke();
-            ctx.fillStyle = '#EF4444'; ctx.beginPath(); ctx.arc(cx,cy,4,0,2*Math.PI); ctx.fill();
-
-            const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
-            const trades = [...new Set(workers.map(w => w.trade))];
-            
-            const legend = document.getElementById('jobLegendContainer'); legend.innerHTML = "";
-            trades.forEach((t, idx) => {
-                legend.innerHTML += `<div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${colors[idx%5]}"></span><span class="text-slate-400 truncate">${t}</span></div>`;
-            });
-
-            workers.forEach(w => {
-                const scale = rMax / radius;
-                const px = cx + (w.relX * scale); const py = cy - (w.relY * scale);
-                const tIdx = trades.indexOf(w.trade);
-                ctx.fillStyle = colors[tIdx%5] || '#FFF'; ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
-                ctx.beginPath(); ctx.arc(px,py,5,0,2*Math.PI); ctx.fill(); ctx.shadowBlur = 0;
-                ctx.fillStyle = '#94A3B8'; ctx.font = '9px sans-serif'; ctx.fillText(w.name, px+7, py+3);
-            });
-        }
-
-        function saveConfigToCloud() {
-            // 安全机制：防止管理员误清空核心数据导致系统崩溃
-            const tVal = document.getElementById('listTrades').value.trim();
-            if(!tVal) { alert("⚠️ 错误：工种列表不能为空！"); return; }
-
-            const split = (str) => str.replace(/，/g, ',').split(',').map(i => i.trim()).filter(Boolean);
-            const payload = {
-                action: "updateConfig",
-                config: { 
-                    lat: parseFloat(document.getElementById('cfgLat').value), lng: parseFloat(document.getElementById('cfgLng').value), radius: parseInt(document.getElementById('cfgRadius').value),
-                    stdIn: document.getElementById('cfgStdIn').value.trim(), stdOut: document.getElementById('cfgStdOut').value.trim(), bufferMin: parseInt(document.getElementById('cfgBufferMin').value)
-                },
-                options: { trades: split(tVal), areas: split(document.getElementById('listAreas').value), supervisors: split(document.getElementById('listSupervisors').value) }
-            };
-
-            document.getElementById('btnSave').innerText = "正在下发同步...";
-            
-            fetch(API_URL, { 
-                method: "POST", 
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload) 
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') { alert("✅ 规则与环境配置同步成功！"); loadCloudData(); }
-            })
-            .catch(err => alert("同步失败，请检查网络！"))
-            .finally(() => document.getElementById('btnSave').innerText = "下发规则并强制同步");
-        }
-    </script>
+        };
+        fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
+            if(res.status === 'success') { alert("🎉 配置字典及地理围栏强锁定已同步云端成功，考勤规则实时即刻生效！"); pollCloudEngine(); }
+        });
+    }
+</script>
 </body>
 </html>
