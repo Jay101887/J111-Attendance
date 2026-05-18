@@ -48,7 +48,7 @@
     </div>
 
     <div id="history-tab" class="tab-panel">
-        <h3>📂 30天生产归档清算日志 (每天07点固化)</h3>
+        <h3>📂 30天历史固化清算日志</h3>
         <div id="history-list" style="overflow-y:auto; flex:1;"></div>
     </div>
 
@@ -79,9 +79,7 @@
     </div>
 </div>
 
-<div id="map-container">
-    <canvas id="sandBoxMap"></canvas>
-</div>
+<div id="map-container"><canvas id="sandBoxMap"></canvas></div>
 
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec";
@@ -91,23 +89,15 @@
 
     window.onload = function() {
         resizeCanvas(); window.addEventListener('resize', resizeCanvas);
-        initMapInteractions();
-        pollCloudEngine();
-        setInterval(pollCloudEngine, 30000); // 30秒高频刷新画布与监控
+        initMapInteractions(); pollCloudEngine(); setInterval(pollCloudEngine, 30000);
     };
 
     function resizeCanvas() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; drawSandbox(); }
-
-    function switchTab(id) {
-        document.querySelectorAll('.tab, .tab-panel').forEach(el => el.classList.remove('active'));
-        event.target.classList.add('active'); document.getElementById(id).classList.add('active');
-    }
+    function switchTab(id) { document.querySelectorAll('.tab, .tab-panel').forEach(el => el.classList.remove('active')); event.target.classList.add('active'); document.getElementById(id).classList.add('active'); }
 
     function pollCloudEngine() {
         fetch(API_URL).then(res => res.json()).then(res => {
             configBlob = res.config; workers = res.analytics.workers;
-            
-            // 回填看板
             document.getElementById('lbl-inside').innerText = res.analytics.total;
             document.getElementById('lbl-active').innerText = res.analytics.stats.totalActive;
             document.getElementById('lbl-day').innerText = res.analytics.stats.dayClosed;
@@ -115,26 +105,20 @@
             document.getElementById('lbl-extra').innerText = res.analytics.stats.extraClosed;
             document.getElementById('lbl-night').innerText = res.analytics.stats.nightClosed;
             
-            // 回填工种统计
-            let tHtml = ""; for(let t in res.analytics.stats.tradeDetails) { tHtml += `🔹 ${t}: <b>${res.analytics.stats.tradeDetails[t]}</b> 人<br>`; }
+            // 精准映射校准完毕的代码行
+            let tHtml = ""; for(let t in res.analytics.stats.trades) { tHtml += `🔹 ${t}: <b>${res.analytics.stats.trades[t]}</b> 人<br>`; }
             document.getElementById('trade-list').innerHTML = tHtml || "暂无人员进场";
 
-            // 回填参数
             document.getElementById('cfg-lat').value = configBlob.lat; document.getElementById('cfg-lng').value = configBlob.lng;
             document.getElementById('cfg-radius').value = configBlob.radius; document.getElementById('cfg-stdin').value = configBlob.stdIn;
             document.getElementById('cfg-stdout').value = configBlob.stdOut; document.getElementById('cfg-buffer').value = configBlob.bufferMin;
             document.getElementById('cfg-rounding').value = configBlob.roundingMin;
-
             document.getElementById('txt-trades').value = res.options.trades.join("\n");
             document.getElementById('txt-areas').value = res.options.areas.join("\n");
             document.getElementById('txt-supervisors').value = res.options.supervisors.join("\n");
 
-            // 回填历史
-            let hHtml = ""; res.analytics.history.forEach(h => {
-                hHtml += `<div class="history-row">📅 <b>${h.date.substring(0,10)}</b> | 当天出勤: ${h.total}人<br>⚡ 闭环拆分: ${h.closed}</div>`;
-            });
+            let hHtml = ""; res.analytics.history.forEach(h => { hHtml += `<div class="history-row">📅 <b>${h.date.substring(0,10)}</b> | 当天出勤: ${h.total}人<br>⚡ 闭环拆分: ${h.closed}</div>`; });
             document.getElementById('history-list').innerHTML = hHtml || "暂无历史固化断代数据";
-
             drawSandbox();
         });
     }
@@ -144,38 +128,20 @@
         container.addEventListener('mousedown', e => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; container.style.cursor = 'grabbing'; });
         window.addEventListener('mouseup', () => { isDragging = false; container.style.cursor = 'grab'; });
         container.addEventListener('mousemove', e => { if (!isDragging) return; offsetX = e.clientX - startX; offsetY = e.clientY - startY; drawSandbox(); });
-        container.addEventListener('wheel', e => {
-            e.preventDefault(); const zoomFactor = 1.1;
-            if (e.deltaY < 0) scale *= zoomFactor; else scale /= zoomFactor;
-            scale = Math.min(Math.max(scale, 0.2), 10); drawSandbox();
-        }, { passive: false });
+        container.addEventListener('wheel', e => { e.preventDefault(); if (e.deltaY < 0) scale *= 1.1; else scale /= 1.1; scale = Math.min(Math.max(scale, 0.2), 10); drawSandbox(); }, { passive: false });
     }
 
     function drawSandbox() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
-        ctx.scale(scale, scale);
-
-        // 1. 绘制工地红线控标圈
+        ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.save();
+        ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY); ctx.scale(scale, scale);
         ctx.beginPath(); ctx.arc(0, 0, configBlob.radius || 150, 0, 2 * Math.PI);
-        ctx.fillStyle = 'rgba(0, 113, 227, 0.04)'; ctx.fill();
-        ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
-
-        // 绘制项目部几何锚点
+        ctx.fillStyle = 'rgba(0, 113, 227, 0.04)'; ctx.fill(); ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = '#ff453a'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 2 * Math.PI); ctx.fill();
-        ctx.fillStyle = '#1d1d1f'; ctx.font = '10px sans-serif'; ctx.fillText("J111 项目部中心锚点", 8, 3);
-
-        // 2. 高精渲染场内在场人员（缩减尺寸至3px，解决重叠臃肿，下班自动被擦除无影）
+        ctx.fillStyle = '#1d1d1f'; ctx.font = '10px sans-serif'; ctx.fillText("J111 中心锚点", 8, 3);
         workers.forEach(w => {
-            ctx.fillStyle = 'rgba(52, 199, 89, 0.85)';
-            ctx.beginPath(); ctx.arc(w.relX, -w.relY, 3.5, 0, 2 * Math.PI); ctx.fill();
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
-
-            ctx.fillStyle = '#1d1d1f'; ctx.font = '9px sans-serif';
-            ctx.fillText(`${w.name} (${w.trade})`, w.relX + 6, -w.relY + 3);
+            ctx.fillStyle = 'rgba(52, 199, 89, 0.85)'; ctx.beginPath(); ctx.arc(w.relX, -w.relY, 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.fillStyle = '#1d1d1f'; ctx.font = '9px sans-serif'; ctx.fillText(`${w.name} (${w.trade})`, w.relX + 6, -w.relY + 3);
         });
-
         ctx.restore();
     }
 
@@ -183,20 +149,12 @@
         const payload = {
             action: 'updateConfig',
             config: {
-                lat: parseFloat(document.getElementById('cfg-lat').value), lng: parseFloat(document.getElementById('cfg-lng').value),
-                radius: parseInt(document.getElementById('cfg-radius').value), stdIn: document.getElementById('cfg-stdin').value,
-                stdOut: document.getElementById('cfg-stdout').value, bufferMin: parseInt(document.getElementById('cfg-buffer').value),
-                roundingMin: parseInt(document.getElementById('cfg-rounding').value)
+                lat: parseFloat(document.getElementById('cfg-lat').value), lng: parseFloat(document.getElementById('cfg-lng').value), radius: parseInt(document.getElementById('cfg-radius').value),
+                stdIn: document.getElementById('cfg-stdin').value, stdOut: document.getElementById('cfg-stdout').value, bufferMin: parseInt(document.getElementById('cfg-buffer').value), roundingMin: parseInt(document.getElementById('cfg-rounding').value)
             },
-            options: {
-                trades: document.getElementById('txt-trades').value.split("\n").filter(String),
-                areas: document.getElementById('txt-areas').value.split("\n").filter(String),
-                supervisors: document.getElementById('txt-supervisors').value.split("\n").filter(String)
-            }
+            options: { trades: document.getElementById('txt-trades').value.split("\n").filter(String), areas: document.getElementById('txt-areas').value.split("\n").filter(String), supervisors: document.getElementById('txt-supervisors').value.split("\n").filter(String) }
         };
-        fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-            if(res.status === 'success') { alert("🎉 配置字典及地理围栏强锁定已同步云端成功，考勤规则实时即刻生效！"); pollCloudEngine(); }
-        });
+        fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) }).then(res => res.json()).then(res => { if(res.status === 'success') { alert("🎉 配置同步成功！"); pollCloudEngine(); } });
     }
 </script>
 </body>
