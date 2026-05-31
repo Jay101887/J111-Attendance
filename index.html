@@ -1,230 +1,335 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J111项目智能数字打卡终端</title>
-    <style>
-        :root { --primary: #0071e3; --warning: #ff453a; --bg: #f5f5f7; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { background: var(--bg); padding: 16px; color: #1d1d1f; }
-        .header-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-        .lang-switch { background: #e5e5ea; border-radius: 20px; padding: 4px; display: flex; font-size: 13px; font-weight: 500; cursor: pointer; }
-        .lang-opt { padding: 4px 12px; border-radius: 16px; color: #86868b; transition: 0.3s; }
-        .lang-opt.active { background: white; color: #1d1d1f; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .card { background: white; padding: 20px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 16px; }
-        h2 { font-size: 20px; margin-bottom: 12px; font-weight: 600; text-align: center; }
-        .warning-box { background: rgba(255,69,58,0.08); border: 1px solid var(--warning); padding: 12px; border-radius: 12px; margin-bottom: 16px; }
-        .warning-box p { color: var(--warning); font-size: 13px; font-weight: bold; line-height: 1.5; }
-        .form-group { margin-bottom: 14px; }
-        label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #86868b; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 15px; background: #fafafa; outline: none; }
-        input:focus, select:focus { border-color: var(--primary); background: #fff; }
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
-        button { padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; transition: 0.2s; }
-        .btn-in { background: #34c759; }
-        .btn-out { background: var(--primary); }
-        button:active { opacity: 0.8; transform: scale(0.98); }
-        #status { font-size: 13px; text-align: center; color: #86868b; margin-top: 10px; line-height: 1.4; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J111 项目智能化多功能打卡终端</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root { 
+      --primary: #007aff; 
+      --success: #34c759; 
+      --danger: #ff3b30; 
+      --warning: #ff9500;
+      --bg: #f2f2f7; 
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: #1c1c1e; padding-bottom: 20px; }
+    
+    /* 顶级粘性高颜值导航栏 */
+    .nav-tabs { display: flex; background: #fff; border-bottom: 1px solid #d1d1d6; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .tab-btn { flex: 1; text-align: center; padding: 14px 0; font-size: 14px; font-weight: 600; color: #8e8e93; border: none; background: none; cursor: pointer; transition: all 0.2s ease; }
+    .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: rgba(0,122,255,0.03); }
+    
+    /* 区域自适应 */
+    .tab-content { display: none; padding: 16px; animation: fadeIn 0.3s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* 卡片式设计 (Ins Style Block) */
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); }
+    h3 { margin-bottom: 14px; font-size: 16px; color: #3a3a3c; border-left: 4px solid var(--primary); padding-left: 8px; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* 表单美化 */
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #8e8e93; margin-bottom: 5px; text-transform: uppercase; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 15px; background: #f2f2f7; transition: all 0.2s ease; -webkit-appearance: none; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(0,122,255,0.1); }
+    
+    /* 按钮组 */
+    .btn-container { display: flex; gap: 12px; margin-top: 20px; }
+    .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: opacity 0.1s ease; }
+    .btn:active { opacity: 0.85; }
+    .btn-in { background: var(--success); }
+    .btn-out { background: var(--primary); }
+    
+    /* 核心看板大数字网格 */
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+    .stat-box { background: #f2f2f7; padding: 14px 8px; border-radius: 10px; text-align: center; border: 1px solid rgba(0,0,0,0.01); }
+    .stat-title { font-size: 12px; color: #636366; font-weight: 500; }
+    .stat-num { font-size: 26px; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    
+    /* 员工出勤感知卡片 */
+    .live-card { background: linear-gradient(135deg, #ffffff 0%, #f6fff8 100%); border-left: 5px solid var(--success); display: none; }
+    .live-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; margin-top: 10px; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px; }
+    .live-grid div { padding: 4px 0; color: #48484a; }
+    .live-grid b { color: #1c1c1e; font-size: 14px; }
+
+    /* 开源 Leaflet 地图样式优化 */
+    #map { width: 100%; height: 460px; border-radius: 10px; background: #e5e5ea; z-index: 1; }
+    .action-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .refresh-btn { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 600; font-size: 14px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .refresh-btn:hover { background: rgba(0,122,255,0.05); }
+    
+    /* 工种明细列表样式 */
+    .trade-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; border-bottom: 1px solid #f2f2f7; }
+    .trade-item:last-child { border-bottom: none; }
+    .badge { background: rgba(0,122,255,0.1); color: var(--primary); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  </style>
 </head>
 <body>
 
-<div class="header-bar">
-    <div class="lang-switch">
-        <div class="lang-opt" id="lang-zh" onclick="setLanguage('zh')">中文</div>
-        <div class="lang-opt" id="lang-en" onclick="setLanguage('en')">English</div>
-    </div>
-</div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('punch-tab')">👷 考勤打卡</button>
+    <button class="tab-btn" onclick="switchTab('map-tab')">📍 实时现场地图</button>
+    <button class="tab-btn" onclick="switchTab('dashboard-tab')">📊 综合管理看板</button>
+  </div>
 
-<div class="card">
-    <h2 id="t-title">J111 标段数字化考勤终端</h2>
+  <div id="punch-tab" class="tab-content active">
+    <div class="card">
+      <h3>员工身份校验登记</h3>
+      <div class="form-group">
+        <label>员工姓名 (Full Name as per WP)</label>
+        <input type="text" id="name" placeholder="请输入完整护照/准证姓名">
+      </div>
+      <div class="form-group">
+        <label>本地手机号码 (Singapore Mobile Number)</label>
+        <input type="tel" id="phone" placeholder="请输入8位本地手机号">
+      </div>
+      <div class="form-group">
+        <label>准证号码最后四位 (FIN Last 4)</label>
+        <input type="text" id="fin" placeholder="例如: 567B" maxlength="4" style="text-transform: uppercase;">
+      </div>
+      <div class="form-group">
+        <label>所属作业工种 (Trade Team)</label>
+        <select id="trade"><option value="">正在从云端安全拉取...</option></select>
+      </div>
+      <div class="form-group">
+        <label>当前具体作业区域 (Working Area)</label>
+        <select id="area"><option value="">正在从云端安全拉取...</option></select>
+      </div>
+      <div class="form-group">
+        <label>今日具体工作内容摘要 (Work Content)</label>
+        <input type="text" id="content" placeholder="填写示例: Precast box girder segment alignment">
+      </div>
+      
+      <div class="btn-container">
+        <button class="btn btn-in" onclick="submitAttendance('checkin')">上班签到 (Check-In)</button>
+        <button class="btn btn-out" onclick="submitAttendance('checkout')">下班签退 (Check-Out)</button>
+      </div>
+    </div>
+
+    <div id="liveCard" class="card live-card">
+      <h3>您的今日考勤清算进度 <span id="cardLabel" style="font-size:12px; background:var(--success); color:#fff; padding:2px 8px; border-radius:10px;">--</span></h3>
+      <div class="live-grid">
+        <div>🌅 白班签到: <b id="c_di">--</b></div>
+        <div>🌇 白班签退: <b id="c_do">--</b></div>
+        <div>🌃 加班签到: <b id="c_oi">--</b></div>
+        <div>🌌 加班签退: <b id="c_oo">--</b></div>
+        <div>🌙 夜班签到: <b id="c_ni">--</b></div>
+        <div>☀️ 夜班签退: <b id="c_no">--</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map-tab" class="tab-content">
+    <div class="action-row">
+      <button class="refresh-btn" onclick="loadMap()">🔄 刷新现场实时标记点</button>
+    </div>
+    <div class="card" style="padding: 6px;">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <div id="dashboard-tab" class="tab-content">
+    <div class="action-row">
+      <button class="refresh-btn" onclick="fetchInitData()">🔄 刷新全盘看板数据</button>
+    </div>
+    <div class="card">
+      <h3>项目当前实战动态看板</h3>
+      <div class="grid">
+        <div class="stat-box"><div class="stat-title">当前在场总人数</div><div class="stat-num" id="s_active">0</div></div>
+        <div class="stat-box"><div class="stat-title">正常白班闭环数</div><div class="stat-num" id="s_day">0</div></div>
+        <div class="stat-box"><div class="stat-title">正常加班闭环数</div><div class="stat-num" id="s_over">0</div></div>
+        <div class="stat-box"><div class="stat-title">正常夜班闭环数</div><div class="stat-num" id="s_night">0</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>当前在线工种分布明细</h3>
+      <div id="trade_breakdown" style="padding-top: 4px;">正在清算工种...</div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // 🔒 请在此处精准粘贴您最新的网络应用部署 URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec"; 
     
-    <div class="warning-box">
-        <p id="t-warning">🚨 重要提示：姓名、完整手机号与准证后4位是您核算工时的绝对依据！系统会自动记忆，请务必确保准确，填错将导致下班无法闭环！</p>
-    </div>
+    let map = null, markerGroup = null;
+    let siteConfig = { lat: 1.3521, lng: 103.8198, radius: 150 };
+    let deviceFingerprint = "";
 
-    <div class="form-group">
-        <label id="t-lblName">员工姓名 (Full Name as per WP)</label>
-        <input type="text" id="name" placeholder="">
-    </div>
-    <div class="form-group">
-        <label id="t-lblPhone">完整手机号码 (Singapore Mobile Number)</label>
-        <input type="tel" id="phone" placeholder="">
-    </div>
-    <div class="form-group">
-        <label id="t-lblFin">准证号码最后四位 (Work Permit Last 4 Characters)</label>
-        <input type="text" id="fin" placeholder="">
-    </div>
-    <div class="form-group">
-        <label id="t-lblTrade">所属工种 (Trade Type)</label>
-        <select id="trade"><option value="">...</option></select>
-    </div>
-    <div class="form-group">
-        <label id="t-lblArea">当前作业区域 (Current Work Area)</label>
-        <select id="area"><option value="">...</option></select>
-    </div>
-    <div class="form-group">
-        <label id="t-lblSupervisor">现场直接督工 (Site Supervisor)</label>
-        <select id="supervisor"><option value="">...</option></select>
-    </div>
-    <div class="form-group">
-        <label id="t-lblContent">今日具体工作内容摘要 (Work Content)</label>
-        <input type="text" id="content" placeholder="">
-    </div>
-
-    <div class="btn-grid">
-        <button class="btn-in" id="t-btnIn" onclick="handleSubmit('checkin')">上班签到</button>
-        <button class="btn-out" id="t-btnOut" onclick="handleSubmit('checkout')">下班签退</button>
-    </div>
-    <p id="status">...</p>
-</div>
-
-<script>
-    // CRITICAL: 部署后务必将下方链接完整替换为您专属的 Web App 链接
-    const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec";
-    let geoConfig = { lat: 1.3521, lng: 103.8198, radius: 150 };
-    let currentLang = 'zh';
-
-    const i18n = {
-        zh: {
-            title: "J111 标段数字化考勤终端",
-            warning: "🚨 重要提示：姓名、完整手机号与准证后4位是您核算工时的绝对依据！系统会自动记忆，请务必确保准确，填错将导致下班无法闭环！",
-            lblName: "员工姓名 (Full Name as per WP)", plhName: "请输入您的英文全名（自动记忆）",
-            lblPhone: "完整手机号码 (Singapore Mobile Number)", plhPhone: "请输入8位本地完整手机号",
-            lblFin: "准证号码最后四位 (FIN Last 4)", plhFin: "例如: 123A, 567B",
-            lblTrade: "所属工种 (Trade Type)", lblArea: "当前作业区域 (Current Work Area)",
-            lblSupervisor: "现场直接督工 (Site Supervisor)", lblContent: "今日具体工作内容摘要 (Work Content)", plhContent: "例: Precast segment installation",
-            btnIn: "上班签到 (Check-In)", btnOut: "下班签退 (Check-Out)",
-            statusInit: "系统初始化中...", statusPull: "正在拉取项目最新布控参数...",
-            statusOk: "已成功连接云端。当前考勤围栏半径：", statusErr: "⚠️ 无法连接云端引擎，请确认网络。",
-            alertInput: "🚨 请必须完整填写英文姓名、手机号码、及标准的4位准证字符！",
-            statusGeo: "正在获取卫星高精度定位...", statusSync: "考勤数据正在同步至云端...",
-            geoFail: "🚨 卫星定位获取失败，请确保手机 GPS 已打开并授权网页定位！",
-            succOk: "✅ 操作成功！打卡已被云端精确捕获并归档。", succUpd: "🔄 修正成功！系统检测到高频误触，已自动覆盖最新时间："
-        },
-        en: {
-            title: "J111 Digital Attendance Terminal",
-            warning: "🚨 IMPORTANT: Your Name, Phone Number, and FIN (Last 4) are strictly required for your timesheet! The system will auto-save them. Please ensure accuracy to avoid unclosed shifts!",
-            lblName: "Full Name (as per WP)", plhName: "Enter your full name (Auto-saved)",
-            lblPhone: "Mobile Number", plhPhone: "Enter 8-digit local mobile number",
-            lblFin: "FIN Last 4 Characters", plhFin: "e.g., 123A, 567B",
-            lblTrade: "Trade Type", lblArea: "Current Work Area",
-            lblSupervisor: "Site Supervisor", lblContent: "Work Content Summary", plhContent: "e.g., Precast segment installation",
-            btnIn: "Check-In", btnOut: "Check-Out",
-            statusInit: "System initializing...", statusPull: "Fetching latest project parameters...",
-            statusOk: "Connected to cloud. Geofence radius: ", statusErr: "⚠️ Failed to connect to cloud engine.",
-            alertInput: "🚨 Please completely fill in your full name, phone number, and 4-character FIN!",
-            statusGeo: "Acquiring high-precision GPS...", statusSync: "Syncing attendance data to cloud...",
-            geoFail: "🚨 GPS acquisition failed. Please turn on your location services!",
-            succOk: "✅ Success! Attendance recorded in the cloud.", succUpd: "🔄 Updated! High-frequency operation detected. Time updated to: "
-        }
-    };
-
+    // 页面加载触发自动登记与环境拉取
     window.onload = function() {
-        // 1. 初始化并检测系统语言 (优先读取本地记忆，其次跟随工友系统)
-        const savedLang = localStorage.getItem('j111_lang');
-        const sysLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
-        setLanguage(savedLang || sysLang);
-
-        // 2. 读取输入框指纹记忆
-        if(localStorage.getItem('j111_name')) document.getElementById('name').value = localStorage.getItem('j111_name');
-        if(localStorage.getItem('j111_phone')) document.getElementById('phone').value = localStorage.getItem('j111_phone');
-        if(localStorage.getItem('j111_fin')) document.getElementById('fin').value = localStorage.getItem('j111_fin');
-        
-        fetchOptions();
+      // 安全设备防代打卡：生成本地专属不可逆指纹
+      if(!localStorage.getItem('j111_dev_id')) {
+        localStorage.setItem('j111_dev_id', 'DEV-' + Math.random().toString(36).substring(2, 11).toUpperCase());
+      }
+      deviceFingerprint = localStorage.getItem('j111_dev_id');
+      fetchInitData();
     };
 
-    function setLanguage(lang) {
-        currentLang = lang; localStorage.setItem('j111_lang', lang);
-        document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
-        document.getElementById('lang-en').classList.toggle('active', lang === 'en');
-        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    // 选项卡无缝平滑横向切换控制
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+      
+      // 切换至地图选项卡时，触发按需高渲染渲染，解决大小自适应断档问题
+      if(tabId === 'map-tab') {
+        setTimeout(initMap, 150);
+      }
+    }
 
-        const t = i18n[lang];
-        document.getElementById('t-title').innerText = t.title;
-        document.getElementById('t-warning').innerText = t.warning;
-        document.getElementById('t-lblName').innerText = t.lblName;
-        document.getElementById('name').placeholder = t.plhName;
-        document.getElementById('t-lblPhone').innerText = t.lblPhone;
-        document.getElementById('phone').placeholder = t.plhPhone;
-        document.getElementById('t-lblFin').innerText = t.lblFin;
-        document.getElementById('fin').placeholder = t.plhFin;
-        document.getElementById('t-lblTrade').innerText = t.lblTrade;
-        document.getElementById('t-lblArea').innerText = t.lblArea;
-        document.getElementById('t-lblSupervisor').innerText = t.lblSupervisor;
-        document.getElementById('t-lblContent').innerText = t.lblContent;
-        document.getElementById('content').placeholder = t.plhContent;
-        document.getElementById('t-btnIn').innerText = t.btnIn;
-        document.getElementById('t-btnOut').innerText = t.btnOut;
+    // 后端全功能接口拉取与看板数据重渲染引擎（严格对齐最新 16 列）
+    function fetchInitData() {
+      fetch(API_URL).then(r => r.json()).then(res => {
+        if(res.config) siteConfig = res.config;
         
-        if (document.getElementById('status').innerText.includes("...")) {
-            document.getElementById('status').innerText = t.statusInit;
+        // 动态回填前端打卡表单的可选参数
+        renderSelect("trade", res.options.trades);
+        renderSelect("area", res.options.areas);
+        
+        // 精准刷新统计看板数据看板
+        document.getElementById("s_active").innerText = res.analytics.stats.totalActive;
+        document.getElementById("s_day").innerText = res.analytics.stats.dayClosed;
+        document.getElementById("s_over").innerText = res.analytics.stats.overClosed;
+        document.getElementById("s_night").innerText = res.analytics.stats.nightClosed;
+        
+        // 精准刷新工种分布面板明细
+        let tHtml = "";
+        for(let key in res.analytics.stats.trades) {
+          tHtml += `
+            <div class="trade-item">
+              <span>👷 <b>${key}</b></span>
+              <span class="badge">当前在场: ${res.analytics.stats.trades[key]} 人</span>
+            </div>
+          `;
         }
+        document.getElementById("trade_breakdown").innerHTML = tHtml || "<div style='color:#8e8e93;text-align:center;'>当前施工现场暂无出勤人员</div>";
+      }).catch(err => console.error("云端连线中断:", err));
     }
 
-    function fetchOptions() {
-        document.getElementById('status').innerText = i18n[currentLang].statusPull;
-        fetch(API_URL).then(res => res.json()).then(res => {
-            geoConfig = res.config;
-            buildSelect('trade', res.options.trades);
-            buildSelect('area', res.options.areas);
-            buildSelect('supervisor', res.options.supervisors);
-            document.getElementById('status').innerText = `${i18n[currentLang].statusOk}${geoConfig.radius}m`;
-        }).catch(err => { document.getElementById('status').innerText = i18n[currentLang].statusErr; });
+    function renderSelect(id, arr) {
+      let el = document.getElementById(id); el.innerHTML = "";
+      arr.forEach(v => el.options.add(new Option(v, v)));
     }
 
-    function buildSelect(id, list) {
-        const el = document.getElementById(id); el.innerHTML = "";
-        list.forEach(i => { const opt = document.createElement('option'); opt.value = i; opt.innerText = i; el.appendChild(opt); });
+    // 📍 初始化 Leaflet 地图核心层
+    function initMap() {
+      if (map !== null) { map.invalidateSize(); return; }
+      
+      // 初始化绑定地图DOM并聚焦围栏中心
+      map = L.map('map').setView([siteConfig.lat, siteConfig.lng], 16);
+      
+      // 挂载免 API Key 的开源 OpenStreetMap 全球高质量瓦片
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      
+      // 绘制工地电子防作弊围栏红圈
+      L.circle([siteConfig.lat, siteConfig.lng], {
+        color: '#ff3b30', fillColor: '#ff3b30', fillOpacity: 0.12, radius: siteConfig.radius
+      }).addTo(map);
+      
+      markerGroup = L.layerGroup().addTo(map);
+      loadMap();
     }
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const p = 0.017453292519943295; const c = Math.cos;
-        const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
-        return 12742000 * Math.asin(Math.sqrt(a));
-    }
-
-    function handleSubmit(action) {
-        const name = document.getElementById('name').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const fin = document.getElementById('fin').value.trim().toUpperCase();
-        const t = i18n[currentLang];
-        
-        if(!name || !phone || fin.length !== 4) { alert(t.alertInput); return; }
-        
-        localStorage.setItem('j111_name', name);
-        localStorage.setItem('j111_phone', phone);
-        localStorage.setItem('j111_fin', fin);
-
-        document.getElementById('status').innerText = t.statusGeo;
-        
-        navigator.geolocation.getCurrentPosition(position => {
-            const distance = getDistance(position.coords.latitude, position.coords.longitude, geoConfig.lat, geoConfig.lng);
-            if (distance > geoConfig.radius) {
-                alert(`${action==='checkin'?'Check-In':'Check-Out'} Failed! Outside boundary. Distance: ${Math.round(distance)}m`);
-                fetchOptions(); return;
-            }
-
-            const payload = {
-                action: action, name: name, phone: phone, fin: fin,
-                trade: document.getElementById('trade').value, area: document.getElementById('area').value,
-                supervisor: document.getElementById('supervisor').value, content: document.getElementById('content').value,
-                lat: position.coords.latitude, lng: position.coords.longitude, distance: distance, siteRadius: geoConfig.radius,
-                deviceId: navigator.userAgent.replace(/[^a-zA-Z0-9]/g, "").substring(0,20)
-            };
-
-            document.getElementById('status').innerText = t.statusSync;
+    // 🔄 异步动态刷新在场工友点位图，智能触发 fitBounds 缩放
+    function loadMap() {
+      if(!map || !markerGroup) return;
+      markerGroup.clearLayers();
+      
+      fetch(API_URL).then(r => r.json()).then(res => {
+        let points = [];
+        if(res.analytics && res.analytics.mapData) {
+          res.analytics.mapData.forEach(p => {
+            if(!p.lat || !p.lon) return;
+            points.push([p.lat, p.lon]);
             
-            fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(res => res.json()).then(res => {
-                if(res.status === 'success') { alert(t.succOk); } 
-                else if(res.status === 'updated') { alert(`${t.succUpd}${res.time}`); } 
-                else if(res.status === 'rejected') { alert(`❌ ${res.msg}`); }
-                fetchOptions();
-            });
-        }, err => { alert(t.geoFail); document.getElementById('status').innerText = t.geoFail; }, { enableHighAccuracy: true, timeout: 10000 });
+            // 构建高质感移动端气泡视窗
+            let popupContent = `
+              <div style="font-size:12px; line-height:1.6; min-width:140px;">
+                <b style="color:var(--primary); font-size:14px; display:block; margin-bottom:4px;">${p.name}</b>
+                🆔 <b>准证后四位:</b> ${p.fin}<br>
+                ⏱️ <b>最新打卡时间:</b> ${p.time}<br>
+                🏗️ <b>作业班组工种:</b> ${p.trade}<br>
+                🚧 <b>现场所处区域:</b> ${p.area}
+              </div>
+            `;
+            L.marker([p.lat, p.lon]).addTo(markerGroup).bindPopup(popupContent);
+          });
+        }
+        
+        // 自动缩放视角，将全量工友完美包络入当前视野
+        if(points.length > 0) {
+          map.fitBounds(L.latLngBounds(points), { padding: [40, 40] });
+        } else {
+          map.setView([siteConfig.lat, siteConfig.lng], 16);
+        }
+      }).catch(err => alert("地图点位拉取失败: " + err));
     }
-</script>
+
+    // 👷 提交流水考勤基础数据核心事务
+    function submitAttendance(actionType) {
+      let name = document.getElementById("name").value.trim();
+      let phone = document.getElementById("phone").value.trim();
+      let fin = document.getElementById("fin").value.trim().toUpperCase();
+      
+      if(!name || !phone || fin.length !== 4) {
+        alert("🚨 提交阻断：请务必完整填写 姓名、本地手机号 以及 4位准证尾号！"); return;
+      }
+      
+      // 激活手机高精度 GPS 定位捕获
+      navigator.geolocation.getCurrentPosition(pos => {
+        let lat = pos.coords.latitude;
+        let lng = pos.coords.longitude;
+        
+        // 高精度哈弗辛多维数学公式距离清算
+        let radLat1 = lat * Math.PI / 180, radLat2 = siteConfig.lat * Math.PI / 180;
+        let diffLng = (lng - siteConfig.lng) * Math.PI / 180;
+        let distance = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin((radLat1 - radLat2)/2),2) + Math.cos(radLat1)*Math.cos(radLat2)*Math.pow(Math.sin(diffLng/2),2))) * 6378137;
+        
+        let payload = {
+          action: actionType, name: name, phone: phone, fin: fin,
+          trade: document.getElementById("trade").value,
+          area: document.getElementById("area").value,
+          content: document.getElementById("content").value,
+          lat: lat, lng: lng, distance: distance, siteRadius: siteConfig.radius,
+          deviceId: deviceFingerprint
+        };
+        
+        // 发射 POST 流水请求
+        fetch(API_URL, { method: "POST", body: JSON.stringify(payload) }).then(r => r.json()).then(res => {
+          if(res.status === 'success' || res.status === 'updated') {
+            alert(`🎉 操作成功！已成功记录考勤时间: ${res.time || "云端已同步"}`);
+            
+            // 实时激活渲染“今日出勤感知卡片”
+            if(res.card) {
+              document.getElementById("liveCard").style.display = "block";
+              document.getElementById("cardLabel").innerText = res.card.label;
+              document.getElementById("c_di").innerText = res.card.dayIn;
+              document.getElementById("c_do").innerText = res.card.dayOut;
+              document.getElementById("c_oi").innerText = res.card.overIn;
+              document.getElementById("c_oo").innerText = res.card.overOut;
+              document.getElementById("c_ni").innerText = res.card.nightIn;
+              document.getElementById("c_no").innerText = res.card.nightOut;
+              
+              // 让页面顺滑滚动，帮助工友一眼看清卡片变化
+              document.getElementById("liveCard").scrollIntoView({ behavior: 'smooth' });
+            }
+            fetchInitData();
+          } else {
+            alert(res.msg || "提交失败，请联系项目管理组。");
+          }
+        });
+      }, err => {
+        alert("❌ 打卡失败：无法获取高精度 GPS 定位信息。请在手机设置或微信中开启该网页的定位获取权限！");
+      }, { enableHighAccuracy: true, timeout: 8000 });
+    }
+  </script>
 </body>
 </html>
