@@ -12,12 +12,10 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background: var(--bg); color: #1c1c1e; padding-bottom: 20px; }
     
-    /* 语言切换栏 */
     .lang-bar { display: flex; justify-content: flex-end; gap: 10px; background: #1c1c1e; padding: 6px 16px; }
     .lang-btn { background: none; border: none; color: #fff; font-size: 12px; cursor: pointer; opacity: 0.6; font-weight: 600; }
     .lang-btn.active { opacity: 1; color: var(--primary); }
 
-    /* 导航栏 */
     .nav-tabs { display: flex; background: #fff; border-bottom: 1px solid #d1d1d6; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .tab-btn { flex: 1; text-align: center; padding: 14px 0; font-size: 13px; font-weight: 600; color: #8e8e93; border: none; background: none; cursor: pointer; }
     .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: rgba(0,122,255,0.03); }
@@ -29,7 +27,6 @@
     .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
     h3 { margin-bottom: 14px; font-size: 15px; color: #3a3a3c; border-left: 4px solid var(--primary); padding-left: 8px; }
     
-    /* 🚨 核心新增：定位状态感知提示栏样式 */
     .gps-status-bar { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     .gps-searching { background: #fff9db; color: #b58900; border: 1px solid #ffe066; }
     .gps-ok { background: #e6fcf5; color: #0ca678; border: 1px solid #96f2d7; }
@@ -40,17 +37,20 @@
     input, select { width: 100%; padding: 11px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; background: #f2f2f7; }
     input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; }
     
+    .action-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .refresh-btn { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 600; font-size: 14px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .refresh-btn:active { background: rgba(0,122,255,0.08); }
+
     .btn-container { display: flex; gap: 12px; margin-top: 20px; }
     .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer; text-align: center; }
     .btn-in { background: var(--success); }
     .btn-out { background: var(--primary); }
     .btn:disabled { background: #aeaeae !important; cursor: not-allowed; opacity: 0.6; }
     
-    /* 密码锁屏界面 */
     .lock-screen { text-align: center; padding: 40px 20px; }
     .lock-input { max-width: 240px; margin: 12px auto; text-align: center; letter-spacing: 4px; font-size: 18px; }
 
-    /* 看板网格 */
     .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
     .stat-box { background: #f2f2f7; padding: 14px 8px; border-radius: 10px; text-align: center; }
     .stat-title { font-size: 12px; color: #636366; }
@@ -138,6 +138,9 @@
       <button class="btn btn-out" style="padding:8px; max-width:150px; margin:0 auto;" onclick="verifyAdmin('map')">验证解锁</button>
     </div>
     <div id="map-inner" style="display: none;">
+      <div class="action-row">
+        <button class="refresh-btn" id="btn-refresh-map" onclick="forceRefreshData()">🔄 强制同步并刷新地图标记点</button>
+      </div>
       <div class="card" style="padding: 6px;"><div id="map"></div></div>
     </div>
   </div>
@@ -149,6 +152,10 @@
       <button class="btn btn-out" style="padding:8px; max-width:150px; margin:0 auto;" onclick="verifyAdmin('dash')">验证解锁</button>
     </div>
     <div id="dash-inner" style="display: none;">
+      <div class="action-row">
+        <button class="refresh-btn" id="btn-refresh-dash" onclick="forceRefreshData()">🔄 从云端强制重刷全盘看板</button>
+      </div>
+      
       <div class="card" style="background: #e5e5ea;">
         <h3>🎛️ 看板高级多维检索过滤</h3>
         <div class="form-group" style="margin-top:8px;">
@@ -179,6 +186,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // 🔒 请在此处精准粘贴您的 GAS WebApp 部署 URL
     const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec"; 
     const ADMIN_PASSWORD = "J111Admin"; 
     
@@ -188,7 +196,6 @@
     let currentLang = 'zh';
     let isAdminUnlocked = false;
 
-    // 🌐 多语言增加了 GPS 状态提示的国际化翻译
     const langDict = {
       zh: {
         nav_punch: "👷 考勤打卡", nav_map: "📍 现场地图", nav_dash: "📊 管理看板",
@@ -223,12 +230,10 @@
 
       document.getElementById("filter-date").value = new Date().toISOString().split('T')[0];
       
-      // 🚨 核心新增：一进页面主动触发 GPS 权限自检提示机制
       checkGPSStatus();
-      fetchInitData();
+      fetchInitData(); 
     };
 
-    // 🚨 核心功能：主动式 GPS 状态状态机检测与信息提示栏回填
     function checkGPSStatus() {
       if (!navigator.geolocation) {
         updateGPSBar('error', "Your device does not support GPS.");
@@ -243,8 +248,10 @@
 
     function updateGPSBar(status, text) {
       let bar = document.getElementById("gps-status");
-      bar.className = "gps-status-bar " + (status === 'ok' ? 'gps-ok' : 'gps-error');
-      bar.innerText = text;
+      if(bar) {
+        bar.className = "gps-status-bar " + (status === 'ok' ? 'gps-ok' : 'gps-error');
+        bar.innerText = text;
+      }
     }
 
     function changeLang(lang) {
@@ -268,23 +275,63 @@
       document.getElementById("b-out").innerText = d.bout;
       document.getElementById("t-live-title").innerText = d.live;
       
-      // 切换语言时同步刷新 GPS 信息栏提示语
       checkGPSStatus();
     }
 
+    // 🔑 走查修复：一并解开父级选项卡的隐藏限制，并确保高内聚调用渲染
     function verifyAdmin(type) {
       let input = document.getElementById(`${type}-password`).value;
       if(input === ADMIN_PASSWORD) {
         isAdminUnlocked = true;
+        
+        // 彻底移开锁屏
         document.getElementById("map-lock").style.display = "none";
         document.getElementById("map-inner").style.display = "block";
         document.getElementById("dash-lock").style.display = "none";
         document.getElementById("dash-inner").style.display = "block";
-        if(type === 'map') setTimeout(initMap, 100);
-        processAnalytics();
+        
+        // 确保切换逻辑完全执行
+        if(type === 'map') {
+          setTimeout(() => {
+            initMap();
+            processAnalytics();
+          }, 150);
+        } else {
+          processAnalytics();
+        }
       } else {
         alert("🚨 密码错误！Wrong password!");
       }
+    }
+
+    // 🔄 走查修复：强制重刷函数重构成 Promise 线性阻塞机制，数据不到手不弹成功提示
+    function forceRefreshData() {
+      let bMap = document.getElementById("btn-refresh-map");
+      let bDash = document.getElementById("btn-refresh-dash");
+      bMap.disabled = true; bDash.disabled = true;
+      bMap.innerText = "⏳ 正在同步中..."; bDash.innerText = "⏳ 正在同步中...";
+
+      fetch(API_URL)
+        .then(r => r.json())
+        .then(res => {
+          if(res.config) siteConfig = res.config;
+          rawLogs = res.rawLogs || []; 
+          
+          renderSelect("trade", res.options.trades, false);
+          renderSelect("area", res.options.areas, false);
+          renderSelect("supervisor", res.options.supervisors, false);
+          renderSelect("filter-supervisor", res.options.supervisors, true);
+
+          if(isAdminUnlocked) processAnalytics();
+          
+          alert("🎉 数据同步成功！最新考勤看板和地图已重新切片计算完毕。");
+        })
+        .catch(err => alert("❌ 网络刷新失败，请检查手机网络信号。"))
+        .finally(() => {
+          bMap.disabled = false; bDash.disabled = false;
+          bMap.innerText = "🔄 强制同步并刷新地图标记点";
+          bDash.innerText = "🔄 从云端强制重刷全盘看板";
+        });
     }
 
     function switchTab(tabId) {
@@ -309,13 +356,17 @@
         renderSelect("filter-supervisor", res.options.supervisors, true);
 
         if(isAdminUnlocked) processAnalytics();
-      });
+      }).catch(err => console.error("读取云端考勤断连:", err));
     }
 
     function renderSelect(id, arr, isFilter) {
-      let el = document.getElementById(id); el.innerHTML = "";
+      let el = document.getElementById(id);
+      if(!el) return;
+      let selectedVal = el.value; 
+      el.innerHTML = "";
       if(isFilter) el.options.add(new Option("全部督工 (ALL)", "ALL"));
       arr.forEach(v => el.options.add(new Option(v, v)));
+      if(selectedVal) el.value = selectedVal;
     }
 
     function processAnalytics() {
@@ -366,7 +417,7 @@
       }
       document.getElementById("trade_breakdown").innerHTML = tHtml || "<div style='color:#8e8e93;text-align:center;padding:10px;'>此日期/督工下无在场工人</div>";
 
-      refreshMapPoints(mapPoints);
+      if(map && isAdminUnlocked) refreshMapPoints(mapPoints);
     }
 
     function initMap() {
@@ -375,7 +426,6 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       L.circle([siteConfig.lat, siteConfig.lng], { color: '#ff3b30', fillColor: '#ff3b30', fillOpacity: 0.1, radius: siteConfig.radius }).addTo(map);
       markerGroup = L.layerGroup().addTo(map);
-      processAnalytics();
     }
 
     function refreshMapPoints(points) {
@@ -385,12 +435,22 @@
       points.forEach(p => {
         if(!p.lat || !p.lon) return;
         arr.push([p.lat, p.lon]);
-        L.marker([p.lat, p.lon]).addTo(markerGroup).bindPopup(`<b>${p.name} (${p.fin})</b><br>Trade: ${p.trade}<br>Area: ${p.area}<br>Time: ${p.time}`);
+        
+        let popupContent = `
+          <div style="font-size:12px; line-height:1.5;">
+            <b style="color:var(--primary); font-size:13px;">${p.name} (${p.fin})</b><br>
+            ⏱️ <b>上场打卡时间:</b> ${p.time}<br>
+            🏗️ <b>工种班组:</b> ${p.trade}<br>
+            🚧 <b>现场区域:</b> ${p.area}
+          </div>
+        `;
+        L.marker([p.lat, p.lon]).addTo(markerGroup).bindPopup(popupContent);
       });
-      if(arr.length > 0) map.fitBounds(L.latLngBounds(arr), { padding: [30, 30] });
+      if(arr.length > 0) {
+        map.fitBounds(L.latLngBounds(arr), { padding: [30, 30] });
+      }
     }
 
-    // 👷 考勤基础数据提交逻辑（深度融合防漏签、防误判机制机制）
     function submitAttendance(actionType) {
       let name = document.getElementById("name").value.trim();
       let phone = document.getElementById("phone").value.trim();
@@ -401,7 +461,6 @@
         alert("🚨 打卡失败：请务必填齐所有个人信息并选择负责督工！Please fill all fields!"); return;
       }
       
-      // 1. 激活防重击锁定状态，将按钮置灰，防止由于卡顿造成的重复提交和误判
       let btnIn = document.getElementById("b-in");
       let btnOut = document.getElementById("b-out");
       btnIn.disabled = true; btnOut.disabled = true;
@@ -409,7 +468,6 @@
       btnIn.innerText = "正在定位中... Connecting GPS...";
       btnOut.innerText = "正在定位中... Connecting GPS...";
 
-      // 获取定位
       navigator.geolocation.getCurrentPosition(pos => {
         let lat = pos.coords.latitude; let lng = pos.coords.longitude;
         
@@ -422,15 +480,11 @@
           lat: lat, lng: lng, deviceId: localStorage.getItem('j111_dev_id')
         };
         
-        // 发送云端请求
         fetch(API_URL, { method: "POST", body: JSON.stringify(payload) }).then(r => r.json()).then(res => {
-          // 2. 解锁按钮状态
           btnIn.disabled = false; btnOut.disabled = false;
           btnIn.innerText = origInText; btnOut.innerText = origOutText;
 
-          // 3. 明确的信息提示回执机制
           if(res.status === 'success' || res.status === 'updated') {
-            // 绿色安全闭环提示框，绝不漏签
             alert(`🎉 打卡成功！云端已完成登记。\n\n时间(Time): ${res.time || ""}\n人员(Name): ${name}`);
             
             if(res.card) {
@@ -440,23 +494,20 @@
               document.getElementById("c_ni").innerText = res.card.nightIn; document.getElementById("c_no").innerText = res.card.nightOut;
               document.getElementById("liveCard").scrollIntoView({ behavior: 'smooth' });
             }
-            fetchInitData(); // 异步刷新最新全盘流水
+            fetchInitData(); 
           } else { 
-            // 异常拦截（如电子围栏阻断、服务器爆满等）的高亮报错
             alert("❌ 云端拒绝：\n" + (res.msg || "未知网络异常，请重试！")); 
           }
         }).catch(err => {
-          // 彻底恢复网络挂起状态
           btnIn.disabled = false; btnOut.disabled = false;
           btnIn.innerText = origInText; btnOut.innerText = origOutText;
-          alert("🚨 网络断连：数据未能成功送达云端，请检查蜂窝网络并重新打卡！");
+          alert("🚨 网络断连：数据未能成功送达云端，请重试！");
         });
       }, err => {
-        // 定位捕获崩塌恢复
         btnIn.disabled = false; btnOut.disabled = false;
         btnIn.innerText = origInText; btnOut.innerText = origOutText;
         updateGPSBar('error', langDict[currentLang].gps_err);
-        alert("❌ 定位失败：未能成功采集到您的 GPS 数据。请务必检查手机定位开关是否打开！");
+        alert("❌ 定位失败：未能成功采集到您的 GPS 数据。");
       }, { enableHighAccuracy: true, timeout: 8000 });
     }
   </script>
