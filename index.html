@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J111 System V5.3 - Fully Verified</title>
+  <title>J111 System V5.4</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root { --primary: #007aff; --success: #34c759; --danger: #ff3b30; --warning: #ff9500; --bg: #f2f2f7; }
@@ -47,7 +47,6 @@
   <div class="lang-bar">
     <button class="lang-btn active" onclick="changeLang('zh')">中文</button>
     <button class="lang-btn" onclick="changeLang('en')">English</button>
-    <button class="lang-btn" onclick="changeLang('bn')">বাঙালি</button>
   </div>
 
   <div class="nav-tabs">
@@ -60,20 +59,20 @@
     <div class="card">
       <h3 id="t-form-title">员工身份校验登记</h3>
       <div id="gps-status" class="gps-status-bar">⏳ GPS Checking...</div>
-      <div class="form-group"><label id="l-name">姓名 (Name)</label><input type="text" id="name"></div>
-      <div class="form-group"><label id="l-phone">手机号 (Mobile)</label><input type="tel" id="phone"></div>
-      <div class="form-group"><label id="l-fin">准证后四位 (FIN Last 4)</label><input type="text" id="fin" maxlength="4" style="text-transform: uppercase;"></div>
-      <div class="form-group"><label id="l-supervisor">负责督工 (Supervisor)</label><select id="supervisor"></select></div>
-      <div class="form-group"><label id="l-trade">工种 (Trade)</label><select id="trade"></select></div>
-      <div class="form-group"><label id="l-area">作业区域 (Area)</label><select id="area"></select></div>
-      <div class="form-group"><label id="l-content">工作内容 (Content)</label><input type="text" id="content"></div>
+      <div class="form-group"><label>姓名 (Name)</label><input type="text" id="name"></div>
+      <div class="form-group"><label>手机号 (Mobile)</label><input type="tel" id="phone"></div>
+      <div class="form-group"><label>准证后四位 (FIN Last 4)</label><input type="text" id="fin" maxlength="4" style="text-transform: uppercase;"></div>
+      <div class="form-group"><label>负责督工 (Supervisor)</label><select id="supervisor"></select></div>
+      <div class="form-group"><label>工种 (Trade)</label><select id="trade"></select></div>
+      <div class="form-group"><label>作业区域 (Area)</label><select id="area"></select></div>
+      <div class="form-group"><label>工作内容 (Content)</label><input type="text" id="content"></div>
       <div class="btn-container">
         <button class="btn btn-in" id="b-in" onclick="submitAttendance('checkin')">签到 Check-In</button>
         <button class="btn btn-out" id="b-out" onclick="submitAttendance('checkout')">签退 Check-Out</button>
       </div>
     </div>
     <div id="liveCard" class="card live-card">
-      <h3 id="t-live-title">今日出勤进度</h3>
+      <h3>今日出勤进度</h3>
       <p>当前状态: <b id="cardLabel" style="color:var(--primary)">--</b></p>
       <div class="live-grid">
         <div>🌅 白进: <b id="c_di">--</b></div><div>🌇 白出: <b id="c_do">--</b></div>
@@ -90,7 +89,7 @@
       <button class="btn btn-out" style="max-width:150px;margin:0 auto;display:block;padding:8px;" onclick="verifyAdmin('map')">Unlock</button>
     </div>
     <div id="map-inner" style="display:none">
-      <button class="refresh-btn" id="btn-refresh-map" onclick="fetchInitData()">🔄 强制同步现场人员定位</button>
+      <button class="refresh-btn" onclick="fetchInitData()">🔄 强制同步现场人员定位</button>
       <div id="map"></div>
     </div>
   </div>
@@ -122,7 +121,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // 🔒 请在此粘贴您的全新 GAS WebApp 部署 URL
+    // 🔗 请在此粘贴您的全新 GAS WebApp 部署 URL
     const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec"; 
     const PASS = "J111Admin";
     
@@ -155,8 +154,6 @@
     }
 
     function fetchInitData() {
-      let btnMap = document.getElementById("btn-refresh-map");
-      if(btnMap) btnMap.innerText = "⏳ 正在拉取云端流水...";
       fetch(API_URL).then(r => r.json()).then(res => {
         siteConfig = res.config; rawLogs = res.rawLogs || [];
         fillSelect("trade", res.options.trades);
@@ -164,7 +161,7 @@
         fillSelect("supervisor", res.options.supervisors);
         fillSelect("filter-supervisor", ["ALL", ...res.options.supervisors]);
         if(unlocked) processAnalytics();
-      }).finally(() => { if(btnMap) btnMap.innerText = "🔄 强制同步现场人员定位"; });
+      });
     }
 
     function fillSelect(id, arr) {
@@ -174,51 +171,48 @@
       if(val) el.value = val;
     }
 
-    // ⚙️ 强校验解包引擎：彻底摆脱数组索引限制
+    // 🔥 彻底重写的全量状态清洗逻辑
     function processAnalytics() {
-      let date = document.getElementById("filter-date").value;
+      let targetDate = document.getElementById("filter-date").value;
       let targetSup = document.getElementById("filter-supervisor").value || "ALL";
-      let active = {}, stats = {d:0, o:0, n:0}, trades = {};
-      let points = [];
+      
+      let activeWorkers = [];
+      let stats = { d: 0, o: 0, n: 0 };
+      let trades = {};
 
-      rawLogs.forEach(row => {
-        if(!row.time) return;
-        let rDate = row.time.split('T')[0];
-        if(rDate !== date) return; 
+      rawLogs.forEach(worker => {
+        if (worker.date !== targetDate) return;
+        if (targetSup !== "ALL" && worker.supervisor !== targetSup) return;
 
-        // 督工精确检索
-        if(targetSup !== "ALL" && row.supervisor !== targetSup) return;
-        
-        let id = row.name + "_" + row.fin; 
-        let action = row.action;
+        // 1. 统计闭环状态数
+        if (worker.statusLabel === "正常白班闭环") stats.d++;
+        if (worker.statusLabel === "正常加班闭环" || worker.statusLabel === "回来加班闭环") stats.o++;
+        if (worker.statusLabel === "正常夜班闭环") stats.n++;
 
-        if(action.includes('checkin')) active[id] = row;
-        else if(action.includes('checkout')) delete active[id];
-        
-        if(action === 'day_checkout') stats.d++;
-        if(action === 'over_checkout') stats.o++;
-        if(action === 'night_checkout') stats.n++;
+        // 2. 核心：判断该员工当前时刻是否“依然留在现场”
+        let isPresent = false;
+        // 如果有进门记录，但没有对应的出门记录，则视为在场
+        if (worker.dayIn && !worker.dayOut) isPresent = true;
+        if (worker.overIn && !worker.overOut) isPresent = true;
+        if (worker.nightIn && !worker.nightOut) isPresent = true;
+
+        if (isPresent) {
+          activeWorkers.push(worker);
+          let t = worker.trade || "未分配";
+          trades[t] = (trades[t] || 0) + 1;
+        }
       });
 
-      let count = 0;
-      for(let k in active) {
-        count++; 
-        let worker = active[k];
-        points.push(worker);
-        let t = worker.trade || "未分配";
-        trades[t] = (trades[t] || 0) + 1;
-      }
-
-      document.getElementById("s_active").innerText = count;
+      document.getElementById("s_active").innerText = activeWorkers.length;
       document.getElementById("s_day").innerText = stats.d;
       document.getElementById("s_over").innerText = stats.o;
       document.getElementById("s_night").innerText = stats.n;
       
       let html = ""; 
       for(let t in trades) html += `<div class="trade-item"><span><b>${t}</b></span><span class="badge">${trades[t]} 人</span></div>`;
-      document.getElementById("trade_breakdown").innerHTML = html || "<div style='color:#8e8e93;text-align:center;padding:10px;'>该检索条件下无在场工人</div>";
+      document.getElementById("trade_breakdown").innerHTML = html || "<div style='color:#8e8e93;text-align:center;padding:10px;'>该督工名下无当前在场工人</div>";
       
-      if(map && unlocked) renderMarkers(points);
+      if(map && unlocked) renderMarkers(activeWorkers);
     }
 
     function initMap() {
@@ -235,11 +229,11 @@
       let latLngList = [];
       
       pts.forEach(p => {
-        let lng = parseFloat(p.lng); let lat = parseFloat(p.lat);
-        if(lng && lat) {
-          latLngList.push([lat, lng]);
-          let popupContent = `<b>${p.name} (${p.fin})</b><br>督工: ${p.supervisor}<br>工种: ${p.trade}<br>上场: ${p.time.split('T')[1]||""}`;
-          L.marker([lat, lng]).addTo(markerGroup).bindPopup(popupContent);
+        let lg = parseFloat(p.lng); let lt = parseFloat(p.lat);
+        if(lg && lt) {
+          latLngList.push([lt, lg]);
+          let popupContent = `<b>${p.name} (${p.fin})</b><br>督工: ${p.supervisor}<br>工种: ${p.trade}<br>最后活动: ${p.lastTime || "未知"}`;
+          L.marker([lt, lg]).addTo(markerGroup).bindPopup(popupContent);
         }
       });
       if(latLngList.length > 0) map.fitBounds(L.latLngBounds(latLngList), { padding: [40, 40] });
@@ -258,7 +252,7 @@
       let phone = document.getElementById("phone").value.trim();
       let fin = document.getElementById("fin").value.trim().toUpperCase();
       let supervisor = document.getElementById("supervisor").value;
-      if(!name || !phone || fin.length !== 4 || !supervisor) { alert("请完整填写关键身份信息！"); return; }
+      if(!name || !phone || fin.length !== 4 || !supervisor) { alert("请完整填写身份信息！"); return; }
 
       let bIn = document.getElementById("b-in"); let bOut = document.getElementById("b-out");
       bIn.disabled = true; bOut.disabled = true;
@@ -267,7 +261,8 @@
         let payload = {
           action: type, name: name, phone: phone, fin: fin, supervisor: supervisor,
           trade: document.getElementById("trade").value, area: document.getElementById("area").value,
-          content: document.getElementById("content").value, lat: pos.coords.latitude, lng: pos.coords.longitude,
+          content: document.getElementById("content").value, 
+          lat: pos.coords.latitude, lng: pos.coords.longitude, // 强制规范参数命名
           deviceId: localStorage.getItem('j111_dev_id') || "WEB_"+Math.random().toString(36).substr(2, 9)
         };
         let dist = 2 * 6378137 * Math.asin(Math.sqrt(Math.pow(Math.sin((payload.lat-siteConfig.lat)*Math.PI/360),2) + Math.cos(payload.lat*Math.PI/180)*Math.cos(siteConfig.lat*Math.PI/180)*Math.pow(Math.sin((payload.lng-siteConfig.lng)*Math.PI/360),2)));
@@ -276,7 +271,7 @@
         fetch(API_URL, {method:"POST", body:JSON.stringify(payload)}).then(r=>r.json()).then(res => {
           bIn.disabled = false; bOut.disabled = false;
           if(res.status==="success") {
-            alert("登记成功！数据已实时落槽云端。");
+            alert("登记成功！");
             if(res.card) {
               document.getElementById("liveCard").style.display="block";
               document.getElementById("cardLabel").innerText = res.card.label;
@@ -286,8 +281,8 @@
             }
             fetchInitData();
           }
-        }).catch(() => { bIn.disabled = false; bOut.disabled = false; });
-      }, () => { bIn.disabled = false; bOut.disabled = false; alert("获取定位失败！"); }, { enableHighAccuracy: true });
+        }).catch(() => { bIn.disabled = false; bOut.disabled = false; alert("提交失败，请检查网络或部署。"); });
+      }, () => { bIn.disabled = false; bOut.disabled = false; alert("定位失败！"); }, { enableHighAccuracy: true });
     }
   </script>
 </body>
