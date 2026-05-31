@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J111 System V5.0</title>
+  <title>J111 System V5.3 - Fully Verified</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root { --primary: #007aff; --success: #34c759; --danger: #ff3b30; --warning: #ff9500; --bg: #f2f2f7; }
@@ -25,8 +25,7 @@
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 12px; font-weight: 600; color: #8e8e93; margin-bottom: 5px; }
     input, select { width: 100%; padding: 11px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; background: #f2f2f7; }
-    .action-row { display: flex; gap: 10px; margin-bottom: 12px; }
-    .refresh-btn { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 600; cursor: pointer; }
+    .refresh-btn { width: 100%; padding: 11px; border-radius: 8px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 10px; }
     .btn-container { display: flex; gap: 12px; margin-top: 20px; }
     .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer; }
     .btn-in { background: var(--success); }
@@ -37,6 +36,8 @@
     .stat-box { background: #f2f2f7; padding: 14px 8px; border-radius: 10px; text-align: center; }
     .stat-num { font-size: 24px; font-weight: 700; color: var(--primary); }
     #map { width: 100%; height: 400px; border-radius: 10px; }
+    .trade-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+    .badge { background: rgba(0,122,255,0.1); color: var(--primary); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
     .live-card { background: #f6fff8; border-left: 5px solid var(--success); display: none; }
     .live-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; margin-top: 10px; padding: 10px; background: #fff; border-radius: 8px; }
   </style>
@@ -61,7 +62,7 @@
       <div id="gps-status" class="gps-status-bar">⏳ GPS Checking...</div>
       <div class="form-group"><label id="l-name">姓名 (Name)</label><input type="text" id="name"></div>
       <div class="form-group"><label id="l-phone">手机号 (Mobile)</label><input type="tel" id="phone"></div>
-      <div class="form-group"><label id="l-fin">准证后四位 (FIN Last 4)</label><input type="text" id="fin" maxlength="4"></div>
+      <div class="form-group"><label id="l-fin">准证后四位 (FIN Last 4)</label><input type="text" id="fin" maxlength="4" style="text-transform: uppercase;"></div>
       <div class="form-group"><label id="l-supervisor">负责督工 (Supervisor)</label><select id="supervisor"></select></div>
       <div class="form-group"><label id="l-trade">工种 (Trade)</label><select id="trade"></select></div>
       <div class="form-group"><label id="l-area">作业区域 (Area)</label><select id="area"></select></div>
@@ -73,7 +74,7 @@
     </div>
     <div id="liveCard" class="card live-card">
       <h3 id="t-live-title">今日出勤进度</h3>
-      <p>状态: <b id="cardLabel">--</b></p>
+      <p>当前状态: <b id="cardLabel" style="color:var(--primary)">--</b></p>
       <div class="live-grid">
         <div>🌅 白进: <b id="c_di">--</b></div><div>🌇 白出: <b id="c_do">--</b></div>
         <div>🌃 加进: <b id="c_oi">--</b></div><div>🌌 加出: <b id="c_oo">--</b></div>
@@ -85,11 +86,11 @@
   <div id="map-tab" class="tab-content">
     <div id="map-lock" class="card lock-screen">
       <p>🔐 管理员密码解锁 (Admin Only)</p>
-      <input type="password" id="map-password" style="text-align:center;margin:10px 0;">
-      <button class="btn btn-out" onclick="verifyAdmin('map')">Unlock</button>
+      <input type="password" id="map-password" style="text-align:center;margin:10px 0;letter-spacing:4px;padding:8px;">
+      <button class="btn btn-out" style="max-width:150px;margin:0 auto;display:block;padding:8px;" onclick="verifyAdmin('map')">Unlock</button>
     </div>
     <div id="map-inner" style="display:none">
-      <button class="refresh-btn" style="width:100%;margin-bottom:10px" onclick="fetchInitData()">🔄 刷新位置 Sync Location</button>
+      <button class="refresh-btn" id="btn-refresh-map" onclick="fetchInitData()">🔄 强制同步现场人员定位</button>
       <div id="map"></div>
     </div>
   </div>
@@ -97,30 +98,34 @@
   <div id="dashboard-tab" class="tab-content">
     <div id="dash-lock" class="card lock-screen">
       <p>🔐 管理员密码解锁 (Admin Only)</p>
-      <input type="password" id="dash-password" style="text-align:center;margin:10px 0;">
-      <button class="btn btn-out" onclick="verifyAdmin('dash')">Unlock</button>
+      <input type="password" id="dash-password" style="text-align:center;margin:10px 0;letter-spacing:4px;padding:8px;">
+      <button class="btn btn-out" style="max-width:150px;margin:0 auto;display:block;padding:8px;" onclick="verifyAdmin('dash')">Unlock</button>
     </div>
     <div id="dash-inner" style="display:none">
-      <div class="card" style="background:#eee">
-        <label>选择日期 Date</label><input type="date" id="filter-date" onchange="processAnalytics()">
-        <label>选择督工 Supervisor</label><select id="filter-supervisor" onchange="processAnalytics()"></select>
+      <div class="card" style="background:#e5e5ea">
+        <h3 style="border-left-color:#636366">🎛️ 检索条件过滤</h3>
+        <div class="form-group"><label>选择日期 (Date)</label><input type="date" id="filter-date" onchange="processAnalytics()"></div>
+        <div class="form-group"><label>选择督工 (Supervisor)</label><select id="filter-supervisor" onchange="processAnalytics()"></select></div>
       </div>
       <div class="card">
+        <h3>项目实战动态看板</h3>
         <div class="grid">
-          <div class="stat-box"><div>场内人数</div><div class="stat-num" id="s_active">0</div></div>
-          <div class="stat-box"><div>白班闭环</div><div class="stat-num" id="s_day">0</div></div>
-          <div class="stat-box"><div>加班闭环</div><div class="stat-num" id="s_over">0</div></div>
-          <div class="stat-box"><div>夜班闭环</div><div class="stat-num" id="s_night">0</div></div>
+          <div class="stat-box"><div>当前在场总人数</div><div class="stat-num" id="s_active">0</div></div>
+          <div class="stat-box"><div>正常白班闭环</div><div class="stat-num" id="s_day">0</div></div>
+          <div class="stat-box"><div>正常加班闭环</div><div class="stat-num" id="s_over">0</div></div>
+          <div class="stat-box"><div>正常夜班闭环</div><div class="stat-num" id="s_night">0</div></div>
         </div>
       </div>
-      <div class="card" id="trade_breakdown"></div>
+      <div class="card"><h3>当前在线工种分布</h3><div id="trade_breakdown"></div></div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec"; // 替换为你的新部署URL
+    // 🔒 请在此粘贴您的全新 GAS WebApp 部署 URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec"; 
     const PASS = "J111Admin";
+    
     let siteConfig = { lat: 1.3521, lng: 103.8198, radius: 150 };
     let rawLogs = [];
     let map = null, markerGroup = null, unlocked = false;
@@ -134,7 +139,9 @@
     function switchTab(id) {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.getElementById(id).classList.add('active');
-      if(id === 'map-tab' && unlocked) setTimeout(() => { if(!map) initMap(); map.invalidateSize(); }, 200);
+      if(id === 'map-tab' && unlocked) {
+        setTimeout(() => { if(!map) initMap(); map.invalidateSize(); processAnalytics(); }, 200);
+      }
     }
 
     function verifyAdmin(type) {
@@ -144,50 +151,62 @@
         document.getElementById("dash-lock").style.display="none"; document.getElementById("dash-inner").style.display="block";
         if(type==='map') setTimeout(initMap, 200);
         processAnalytics();
-      } else { alert("Error Password!"); }
+      } else { alert("密码错误！"); }
     }
 
     function fetchInitData() {
+      let btnMap = document.getElementById("btn-refresh-map");
+      if(btnMap) btnMap.innerText = "⏳ 正在拉取云端流水...";
       fetch(API_URL).then(r => r.json()).then(res => {
-        siteConfig = res.config; rawLogs = res.rawLogs;
+        siteConfig = res.config; rawLogs = res.rawLogs || [];
         fillSelect("trade", res.options.trades);
         fillSelect("area", res.options.areas);
         fillSelect("supervisor", res.options.supervisors);
         fillSelect("filter-supervisor", ["ALL", ...res.options.supervisors]);
         if(unlocked) processAnalytics();
-      });
+      }).finally(() => { if(btnMap) btnMap.innerText = "🔄 强制同步现场人员定位"; });
     }
 
     function fillSelect(id, arr) {
       let el = document.getElementById(id); if(!el) return;
-      el.innerHTML = ""; arr.forEach(v => el.options.add(new Option(v, v)));
+      let val = el.value; el.innerHTML = ""; 
+      arr.forEach(v => el.options.add(new Option(v, v)));
+      if(val) el.value = val;
     }
 
+    // ⚙️ 强校验解包引擎：彻底摆脱数组索引限制
     function processAnalytics() {
       let date = document.getElementById("filter-date").value;
-      let sup = document.getElementById("filter-supervisor").value;
+      let targetSup = document.getElementById("filter-supervisor").value || "ALL";
       let active = {}, stats = {d:0, o:0, n:0}, trades = {};
       let points = [];
 
       rawLogs.forEach(row => {
-        let rDate = row[0].split('T')[0];
-        if(rDate !== date) return;
-        // 如果后端传回的第6列是督工（此处按新后端逻辑：第6列是督工）
-        // 但注意：rawLogs转换逻辑里，督工位目前传的是"ALL"，需根据实际对齐
+        if(!row.time) return;
+        let rDate = row.time.split('T')[0];
+        if(rDate !== date) return; 
+
+        // 督工精确检索
+        if(targetSup !== "ALL" && row.supervisor !== targetSup) return;
         
-        let id = row[2]+"_"+row[4];
-        if(row[1].includes('checkin')) active[id] = row;
-        if(row[1].includes('checkout')) delete active[id];
+        let id = row.name + "_" + row.fin; 
+        let action = row.action;
+
+        if(action.includes('checkin')) active[id] = row;
+        else if(action.includes('checkout')) delete active[id];
         
-        if(row[1]==='day_checkout') stats.d++;
-        if(row[1]==='over_checkout') stats.o++;
-        if(row[1]==='night_checkout') stats.n++;
+        if(action === 'day_checkout') stats.d++;
+        if(action === 'over_checkout') stats.o++;
+        if(action === 'night_checkout') stats.n++;
       });
 
       let count = 0;
       for(let k in active) {
-        count++; points.push(active[k]);
-        let t = active[k][6]; trades[t] = (trades[t]||0)+1;
+        count++; 
+        let worker = active[k];
+        points.push(worker);
+        let t = worker.trade || "未分配";
+        trades[t] = (trades[t] || 0) + 1;
       }
 
       document.getElementById("s_active").innerText = count;
@@ -195,66 +214,80 @@
       document.getElementById("s_over").innerText = stats.o;
       document.getElementById("s_night").innerText = stats.n;
       
-      let html = ""; for(let t in trades) html += `<div>${t}: ${trades[t]}人</div>`;
-      document.getElementById("trade_breakdown").innerHTML = html;
+      let html = ""; 
+      for(let t in trades) html += `<div class="trade-item"><span><b>${t}</b></span><span class="badge">${trades[t]} 人</span></div>`;
+      document.getElementById("trade_breakdown").innerHTML = html || "<div style='color:#8e8e93;text-align:center;padding:10px;'>该检索条件下无在场工人</div>";
       
-      if(map) renderMarkers(points);
+      if(map && unlocked) renderMarkers(points);
     }
 
     function initMap() {
+      if (map !== null) return;
       map = L.map('map').setView([siteConfig.lat, siteConfig.lng], 16);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      L.circle([siteConfig.lat, siteConfig.lng], {radius: siteConfig.radius, color:'red'}).addTo(map);
+      L.circle([siteConfig.lat, siteConfig.lng], {radius: siteConfig.radius, color:'red', fillOpacity:0.05}).addTo(map);
       markerGroup = L.layerGroup().addTo(map);
     }
 
     function renderMarkers(pts) {
+      if(!markerGroup || !map) return;
       markerGroup.clearLayers();
+      let latLngList = [];
+      
       pts.forEach(p => {
-        if(p[8] && p[9]) L.marker([p[9], p[8]]).addTo(markerGroup).bindPopup(`${p[2]}<br>${p[6]}`);
+        let lng = parseFloat(p.lng); let lat = parseFloat(p.lat);
+        if(lng && lat) {
+          latLngList.push([lat, lng]);
+          let popupContent = `<b>${p.name} (${p.fin})</b><br>督工: ${p.supervisor}<br>工种: ${p.trade}<br>上场: ${p.time.split('T')[1]||""}`;
+          L.marker([lat, lng]).addTo(markerGroup).bindPopup(popupContent);
+        }
       });
+      if(latLngList.length > 0) map.fitBounds(L.latLngBounds(latLngList), { padding: [40, 40] });
     }
 
     function checkGPS() {
+      if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(
-        () => { document.getElementById("gps-status").innerText="✅ GPS OK"; document.getElementById("gps-status").className="gps-status-bar gps-ok"; },
-        () => { document.getElementById("gps-status").innerText="❌ GPS Error"; document.getElementById("gps-status").className="gps-status-bar gps-error"; }
+        () => { document.getElementById("gps-status").innerText="✅ GPS 定位就绪"; document.getElementById("gps-status").className="gps-status-bar gps-ok"; },
+        () => { document.getElementById("gps-status").innerText="❌ 请开启手机定位"; document.getElementById("gps-status").className="gps-status-bar gps-error"; }
       );
     }
 
     function submitAttendance(type) {
-      let payload = {
-        action: type,
-        name: document.getElementById("name").value,
-        phone: document.getElementById("phone").value,
-        fin: document.getElementById("fin").value,
-        supervisor: document.getElementById("supervisor").value,
-        trade: document.getElementById("trade").value,
-        area: document.getElementById("area").value,
-        content: document.getElementById("content").value,
-        deviceId: localStorage.getItem('j111_dev_id') || "WEB_"+Math.random()
-      };
-      
+      let name = document.getElementById("name").value.trim();
+      let phone = document.getElementById("phone").value.trim();
+      let fin = document.getElementById("fin").value.trim().toUpperCase();
+      let supervisor = document.getElementById("supervisor").value;
+      if(!name || !phone || fin.length !== 4 || !supervisor) { alert("请完整填写关键身份信息！"); return; }
+
+      let bIn = document.getElementById("b-in"); let bOut = document.getElementById("b-out");
+      bIn.disabled = true; bOut.disabled = true;
+
       navigator.geolocation.getCurrentPosition(pos => {
-        payload.lat = pos.coords.latitude; payload.lng = pos.coords.longitude;
-        // 计算距离
+        let payload = {
+          action: type, name: name, phone: phone, fin: fin, supervisor: supervisor,
+          trade: document.getElementById("trade").value, area: document.getElementById("area").value,
+          content: document.getElementById("content").value, lat: pos.coords.latitude, lng: pos.coords.longitude,
+          deviceId: localStorage.getItem('j111_dev_id') || "WEB_"+Math.random().toString(36).substr(2, 9)
+        };
         let dist = 2 * 6378137 * Math.asin(Math.sqrt(Math.pow(Math.sin((payload.lat-siteConfig.lat)*Math.PI/360),2) + Math.cos(payload.lat*Math.PI/180)*Math.cos(siteConfig.lat*Math.PI/180)*Math.pow(Math.sin((payload.lng-siteConfig.lng)*Math.PI/360),2)));
-        payload.distance = dist;
+        payload.distance = Math.round(dist);
 
         fetch(API_URL, {method:"POST", body:JSON.stringify(payload)}).then(r=>r.json()).then(res => {
+          bIn.disabled = false; bOut.disabled = false;
           if(res.status==="success") {
-            alert("Success!");
+            alert("登记成功！数据已实时落槽云端。");
             if(res.card) {
               document.getElementById("liveCard").style.display="block";
               document.getElementById("cardLabel").innerText = res.card.label;
-              document.getElementById("c_di").innerText = res.card.dayIn; document.getElementById("c_do").innerText = res.card.dayOut;
-              document.getElementById("c_oi").innerText = res.card.overIn; document.getElementById("c_oo").innerText = res.card.overOut;
-              document.getElementById("c_ni").innerText = res.card.nightIn; document.getElementById("c_no").innerText = res.card.nightOut;
+              document.getElementById("c_di").innerText = res.card.dayIn||"--"; document.getElementById("c_do").innerText = res.card.dayOut||"--";
+              document.getElementById("c_oi").innerText = res.card.overIn||"--"; document.getElementById("c_oo").innerText = res.card.overOut||"--";
+              document.getElementById("c_ni").innerText = res.card.nightIn||"--"; document.getElementById("c_no").innerText = res.card.nightOut||"--";
             }
             fetchInitData();
           }
-        });
-      });
+        }).catch(() => { bIn.disabled = false; bOut.disabled = false; });
+      }, () => { bIn.disabled = false; bOut.disabled = false; alert("获取定位失败！"); }, { enableHighAccuracy: true });
     }
   </script>
 </body>
