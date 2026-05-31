@@ -3,331 +3,460 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J111 项目智能化多功能打卡终端</title>
+  <title>J111 System</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root { 
-      --primary: #007aff; 
-      --success: #34c759; 
-      --danger: #ff3b30; 
-      --warning: #ff9500;
-      --bg: #f2f2f7; 
+      --primary: #007aff; --success: #34c759; --danger: #ff3b30; --warning: #ff9500; --bg: #f2f2f7; 
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background: var(--bg); color: #1c1c1e; padding-bottom: 20px; }
     
-    /* 顶级粘性高颜值导航栏 */
+    /* 语言切换栏 */
+    .lang-bar { display: flex; justify-content: flex-end; gap: 10px; background: #1c1c1e; padding: 6px 16px; }
+    .lang-btn { background: none; border: none; color: #fff; font-size: 12px; cursor: pointer; opacity: 0.6; font-weight: 600; }
+    .lang-btn.active { opacity: 1; color: var(--primary); }
+
+    /* 导航栏 */
     .nav-tabs { display: flex; background: #fff; border-bottom: 1px solid #d1d1d6; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .tab-btn { flex: 1; text-align: center; padding: 14px 0; font-size: 14px; font-weight: 600; color: #8e8e93; border: none; background: none; cursor: pointer; transition: all 0.2s ease; }
+    .tab-btn { flex: 1; text-align: center; padding: 14px 0; font-size: 13px; font-weight: 600; color: #8e8e93; border: none; background: none; cursor: pointer; }
     .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: rgba(0,122,255,0.03); }
     
-    /* 区域自适应 */
-    .tab-content { display: none; padding: 16px; animation: fadeIn 0.3s ease; }
+    .tab-content { display: none; padding: 16px; animation: fadeIn 0.2s ease; }
     .tab-content.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     
-    /* 卡片式设计 (Ins Style Block) */
-    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); }
-    h3 { margin-bottom: 14px; font-size: 16px; color: #3a3a3c; border-left: 4px solid var(--primary); padding-left: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
+    h3 { margin-bottom: 14px; font-size: 15px; color: #3a3a3c; border-left: 4px solid var(--primary); padding-left: 8px; }
     
-    /* 表单美化 */
+    /* 🚨 核心新增：定位状态感知提示栏样式 */
+    .gps-status-bar { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .gps-searching { background: #fff9db; color: #b58900; border: 1px solid #ffe066; }
+    .gps-ok { background: #e6fcf5; color: #0ca678; border: 1px solid #96f2d7; }
+    .gps-error { background: #fff5f5; color: #e03131; border: 1px solid #ffc9c9; }
+
     .form-group { margin-bottom: 14px; }
-    label { display: block; font-size: 12px; font-weight: 600; color: #8e8e93; margin-bottom: 5px; text-transform: uppercase; }
-    input, select { width: 100%; padding: 12px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 15px; background: #f2f2f7; transition: all 0.2s ease; -webkit-appearance: none; }
-    input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(0,122,255,0.1); }
+    label { display: block; font-size: 12px; font-weight: 600; color: #8e8e93; margin-bottom: 5px; }
+    input, select { width: 100%; padding: 11px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; background: #f2f2f7; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; }
     
-    /* 按钮组 */
     .btn-container { display: flex; gap: 12px; margin-top: 20px; }
-    .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: opacity 0.1s ease; }
-    .btn:active { opacity: 0.85; }
+    .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; color: #fff; cursor: pointer; text-align: center; }
     .btn-in { background: var(--success); }
     .btn-out { background: var(--primary); }
+    .btn:disabled { background: #aeaeae !important; cursor: not-allowed; opacity: 0.6; }
     
-    /* 核心看板大数字网格 */
+    /* 密码锁屏界面 */
+    .lock-screen { text-align: center; padding: 40px 20px; }
+    .lock-input { max-width: 240px; margin: 12px auto; text-align: center; letter-spacing: 4px; font-size: 18px; }
+
+    /* 看板网格 */
     .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
-    .stat-box { background: #f2f2f7; padding: 14px 8px; border-radius: 10px; text-align: center; border: 1px solid rgba(0,0,0,0.01); }
-    .stat-title { font-size: 12px; color: #636366; font-weight: 500; }
-    .stat-num { font-size: 26px; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    .stat-box { background: #f2f2f7; padding: 14px 8px; border-radius: 10px; text-align: center; }
+    .stat-title { font-size: 12px; color: #636366; }
+    .stat-num { font-size: 24px; font-weight: 700; color: var(--primary); margin-top: 4px; }
     
-    /* 员工出勤感知卡片 */
+    #map { width: 100%; height: 400px; border-radius: 10px; background: #e5e5ea; }
+    .trade-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; border-bottom: 1px solid #f2f2f7; font-size: 14px; }
+    .badge { background: rgba(0,122,255,0.1); color: var(--primary); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    
     .live-card { background: linear-gradient(135deg, #ffffff 0%, #f6fff8 100%); border-left: 5px solid var(--success); display: none; }
     .live-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; margin-top: 10px; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px; }
-    .live-grid div { padding: 4px 0; color: #48484a; }
-    .live-grid b { color: #1c1c1e; font-size: 14px; }
-
-    /* 开源 Leaflet 地图样式优化 */
-    #map { width: 100%; height: 460px; border-radius: 10px; background: #e5e5ea; z-index: 1; }
-    .action-row { display: flex; gap: 10px; margin-bottom: 12px; }
-    .refresh-btn { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid var(--primary); background: #fff; color: var(--primary); font-weight: 600; font-size: 14px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .refresh-btn:hover { background: rgba(0,122,255,0.05); }
-    
-    /* 工种明细列表样式 */
-    .trade-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; border-bottom: 1px solid #f2f2f7; }
-    .trade-item:last-child { border-bottom: none; }
-    .badge { background: rgba(0,122,255,0.1); color: var(--primary); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
   </style>
 </head>
 <body>
 
+  <div class="lang-bar">
+    <button class="lang-btn" id="btn-zh" onclick="changeLang('zh')">中文</button>
+    <button class="lang-btn" id="btn-en" onclick="changeLang('en')">English</button>
+    <button class="lang-btn" id="btn-bn" onclick="changeLang('bn')">বাঙালি (BN)</button>
+  </div>
+
   <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('punch-tab')">👷 考勤打卡</button>
-    <button class="tab-btn" onclick="switchTab('map-tab')">📍 实时现场地图</button>
-    <button class="tab-btn" onclick="switchTab('dashboard-tab')">📊 综合管理看板</button>
+    <button class="tab-btn active" id="nav-punch" onclick="switchTab('punch-tab')">👷 考勤打卡</button>
+    <button class="tab-btn" id="nav-map" onclick="switchTab('map-tab')">📍 现场地图</button>
+    <button class="tab-btn" id="nav-dash" onclick="switchTab('dashboard-tab')">📊 管理看板</button>
   </div>
 
   <div id="punch-tab" class="tab-content active">
     <div class="card">
-      <h3>员工身份校验登记</h3>
+      <h3 id="t-form-title">员工身份校验登记</h3>
+      
+      <div id="gps-status" class="gps-status-bar gps-searching">
+        ⏳ 正在侦测您的手机定位状态... Detecting GPS status...
+      </div>
+
       <div class="form-group">
-        <label>员工姓名 (Full Name as per WP)</label>
-        <input type="text" id="name" placeholder="请输入完整护照/准证姓名">
+        <label id="l-name">员工姓名 (Full Name)</label>
+        <input type="text" id="name" placeholder="Name">
       </div>
       <div class="form-group">
-        <label>本地手机号码 (Singapore Mobile Number)</label>
-        <input type="tel" id="phone" placeholder="请输入8位本地手机号">
+        <label id="l-phone">本地手机号码 (SG Mobile Number)</label>
+        <input type="tel" id="phone" placeholder="88889999">
       </div>
       <div class="form-group">
-        <label>准证号码最后四位 (FIN Last 4)</label>
-        <input type="text" id="fin" placeholder="例如: 567B" maxlength="4" style="text-transform: uppercase;">
+        <label id="l-fin">准证号码最后四位 (FIN Last 4)</label>
+        <input type="text" id="fin" placeholder="e.g. 567B" maxlength="4" style="text-transform: uppercase;">
       </div>
       <div class="form-group">
-        <label>所属作业工种 (Trade Team)</label>
-        <select id="trade"><option value="">正在从云端安全拉取...</option></select>
+        <label id="l-supervisor">负责督工 (Supervisor / PM)</label>
+        <select id="supervisor"><option value="">Loading...</option></select>
       </div>
       <div class="form-group">
-        <label>当前具体作业区域 (Working Area)</label>
-        <select id="area"><option value="">正在从云端安全拉取...</option></select>
+        <label id="l-trade">所属作业工种 (Trade Team)</label>
+        <select id="trade"><option value="">Loading...</option></select>
       </div>
       <div class="form-group">
-        <label>今日具体工作内容摘要 (Work Content)</label>
-        <input type="text" id="content" placeholder="填写示例: Precast box girder segment alignment">
+        <label id="l-area">当前具体作业区域 (Working Area)</label>
+        <select id="area"><option value="">Loading...</option></select>
+      </div>
+      <div class="form-group">
+        <label id="l-content">今日具体工作内容摘要 (Work Content)</label>
+        <input type="text" id="content" placeholder="e.g. Precast box girder segment">
       </div>
       
       <div class="btn-container">
-        <button class="btn btn-in" onclick="submitAttendance('checkin')">上班签到 (Check-In)</button>
-        <button class="btn btn-out" onclick="submitAttendance('checkout')">下班签退 (Check-Out)</button>
+        <button class="btn btn-in" id="b-in" onclick="submitAttendance('checkin')">上班签到 (Check-In)</button>
+        <button class="btn btn-out" id="b-out" onclick="submitAttendance('checkout')">下班签退 (Check-Out)</button>
       </div>
     </div>
 
     <div id="liveCard" class="card live-card">
-      <h3>您的今日考勤清算进度 <span id="cardLabel" style="font-size:12px; background:var(--success); color:#fff; padding:2px 8px; border-radius:10px;">--</span></h3>
+      <h3 id="t-live-title">您的今日考勤清算进度</h3>
       <div class="live-grid">
-        <div>🌅 白班签到: <b id="c_di">--</b></div>
-        <div>🌇 白班签退: <b id="c_do">--</b></div>
-        <div>🌃 加班签到: <b id="c_oi">--</b></div>
-        <div>🌌 加班签退: <b id="c_oo">--</b></div>
-        <div>🌙 夜班签到: <b id="c_ni">--</b></div>
-        <div>☀️ 夜班签退: <b id="c_no">--</b></div>
+        <div>🌅 白班签到: <b id="c_di">--</b></div><div>🌇 白班签退: <b id="c_do">--</b></div>
+        <div>🌃 加班签到: <b id="c_oi">--</b></div><div>🌌 加班签退: <b id="c_oo">--</b></div>
+        <div>🌙 夜班签到: <b id="c_ni">--</b></div><div>☀️ 夜班签退: <b id="c_no">--</b></div>
       </div>
     </div>
   </div>
 
   <div id="map-tab" class="tab-content">
-    <div class="action-row">
-      <button class="refresh-btn" onclick="loadMap()">🔄 刷新现场实时标记点</button>
+    <div id="map-lock" class="card lock-screen">
+      <p>🔐 请输入管理员安全密码解锁地图</p>
+      <input type="password" id="map-password" class="lock-input" placeholder="••••••">
+      <button class="btn btn-out" style="padding:8px; max-width:150px; margin:0 auto;" onclick="verifyAdmin('map')">验证解锁</button>
     </div>
-    <div class="card" style="padding: 6px;">
-      <div id="map"></div>
+    <div id="map-inner" style="display: none;">
+      <div class="card" style="padding: 6px;"><div id="map"></div></div>
     </div>
   </div>
 
   <div id="dashboard-tab" class="tab-content">
-    <div class="action-row">
-      <button class="refresh-btn" onclick="fetchInitData()">🔄 刷新全盘看板数据</button>
+    <div id="dash-lock" class="card lock-screen">
+      <p>🔐 请输入管理员安全密码解锁综合看板</p>
+      <input type="password" id="dash-password" class="lock-input" placeholder="••••••">
+      <button class="btn btn-out" style="padding:8px; max-width:150px; margin:0 auto;" onclick="verifyAdmin('dash')">验证解锁</button>
     </div>
-    <div class="card">
-      <h3>项目当前实战动态看板</h3>
-      <div class="grid">
-        <div class="stat-box"><div class="stat-title">当前在场总人数</div><div class="stat-num" id="s_active">0</div></div>
-        <div class="stat-box"><div class="stat-title">正常白班闭环数</div><div class="stat-num" id="s_day">0</div></div>
-        <div class="stat-box"><div class="stat-title">正常加班闭环数</div><div class="stat-num" id="s_over">0</div></div>
-        <div class="stat-box"><div class="stat-title">正常夜班闭环数</div><div class="stat-num" id="s_night">0</div></div>
+    <div id="dash-inner" style="display: none;">
+      <div class="card" style="background: #e5e5ea;">
+        <h3>🎛️ 看板高级多维检索过滤</h3>
+        <div class="form-group" style="margin-top:8px;">
+          <label>查看日期 (Select Date)</label>
+          <input type="date" id="filter-date" onchange="processAnalytics()">
+        </div>
+        <div class="form-group">
+          <label>指定督工 (Filter by Supervisor)</label>
+          <select id="filter-supervisor" onchange="processAnalytics()"><option value="ALL">全部督工 (ALL)</option></select>
+        </div>
       </div>
-    </div>
-    <div class="card">
-      <h3>当前在线工种分布明细</h3>
-      <div id="trade_breakdown" style="padding-top: 4px;">正在清算工种...</div>
+
+      <div class="card">
+        <h3>项目实战动态看板 (当日计算)</h3>
+        <div class="grid">
+          <div class="stat-box"><div class="stat-title">当前在场总人数</div><div class="stat-num" id="s_active">0</div></div>
+          <div class="stat-box"><div class="stat-title">正常白班闭环数</div><div class="stat-num" id="s_day">0</div></div>
+          <div class="stat-box"><div class="stat-title">正常加班闭环数</div><div class="stat-num" id="s_over">0</div></div>
+          <div class="stat-box"><div class="stat-title">正常夜班闭环数</div><div class="stat-num" id="s_night">0</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>当前在线工种分布明细</h3>
+        <div id="trade_breakdown">正在清洗云端流水...</div>
+      </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // 🔒 请在此处精准粘贴您最新的网络应用部署 URL
     const API_URL = "https://script.google.com/macros/s/AKfycbzejNYzlV6jmhDHg_sUWZJJdIfkM_iSLemV5KQP9bSXLA3Fd99qg7fehSZN0JE5Yh_s/exec"; 
+    const ADMIN_PASSWORD = "J111Admin"; 
     
     let map = null, markerGroup = null;
     let siteConfig = { lat: 1.3521, lng: 103.8198, radius: 150 };
-    let deviceFingerprint = "";
+    let rawLogs = []; 
+    let currentLang = 'zh';
+    let isAdminUnlocked = false;
 
-    // 页面加载触发自动登记与环境拉取
-    window.onload = function() {
-      // 安全设备防代打卡：生成本地专属不可逆指纹
-      if(!localStorage.getItem('j111_dev_id')) {
-        localStorage.setItem('j111_dev_id', 'DEV-' + Math.random().toString(36).substring(2, 11).toUpperCase());
+    // 🌐 多语言增加了 GPS 状态提示的国际化翻译
+    const langDict = {
+      zh: {
+        nav_punch: "👷 考勤打卡", nav_map: "📍 现场地图", nav_dash: "📊 管理看板",
+        title: "员工身份校验登记", name: "员工姓名 (Full Name as per WP)", phone: "本地手机号码 (Singapore Mobile)",
+        fin: "准证号码最后四位 (FIN Last 4)", supervisor: "负责督工 (Supervisor / PM)", trade: "所属作业工种 (Trade Team)",
+        area: "当前具体作业区域 (Working Area)", content: "今日具体工作内容摘要 (Work Content)", bin: "上班签到 (Check-In)", bout: "下班签退 (Check-Out)", live: "您的今日考勤清算进度",
+        gps_err: "❌ 定位权限未开启！请在手机设置或微信中允许网页使用高精度定位，否则无法打卡！", gps_ok: "✅ 手机高精度 GPS 定位已正常就绪，您可以开始打卡。"
+      },
+      en: {
+        nav_punch: "👷 Punch Clock", nav_map: "📍 Live Map", nav_dash: "📊 Dashboard",
+        title: "Employee Authentication", name: "Full Name (as per WP)", phone: "Singapore Mobile Number",
+        fin: "FIN Last 4 Digits", supervisor: "Supervisor / PM in Charge", trade: "Job Trade Team",
+        area: "Specific Working Area", content: "Today's Work Summary Content", bin: "Check-In (Start)", bout: "Check-Out (End)", live: "Your Attendance Progress Today",
+        gps_err: "❌ GPS Disabled! Please enable high-accuracy location service for this site in your phone settings.", gps_ok: "✅ GPS Location Ready. You can punch now."
+      },
+      bn: {
+        nav_punch: "👷 ডিউটি উপস্থিতি", nav_map: "📍 লাইভ ম্যাপ", nav_dash: "📊 ড্যাশবোর্ড",
+        title: "কর্মচারী আইডি যাচাইকরণ", name: "পূর্ণ নাম (WP অনুযায়ী)", phone: "সিঙ্গাপুর মোবাইল নম্বর",
+        fin: "FIN নম্বরের শেষ 4 সংখ্যা", supervisor: "তত্ত্বাবধায়ক / পিএম", trade: "কাজের গ্রুপ (Trade)",
+        area: "কাজের এলাকা (Working Area)", content: "আজকের কাজের বিবরণ", bin: "চেক-ইন (শুরু)", bout: "চেক-আউট (শেষ)", live: "আজ আপনার উপস্থিতি অগ্রগতি",
+        gps_err: "❌ জিপিএস বন্ধ আছে! আপনার ফোন সেটিংসে লোকেশন অন করুন, অন্যথায় হাজিরা হবে না।", gps_ok: "✅ জিপিএস লোকেশন প্রস্তুত। আপনি এখন হাজিরা দিতে পারেন।"
       }
-      deviceFingerprint = localStorage.getItem('j111_dev_id');
+    };
+
+    window.onload = function() {
+      let sysLang = navigator.language || navigator.userLanguage;
+      sysLang = sysLang.toLowerCase();
+      if(sysLang.includes('bn') || sysLang.includes('ben')) currentLang = 'bn';
+      else if(sysLang.includes('en')) currentLang = 'en';
+      else currentLang = 'zh';
+      changeLang(currentLang);
+
+      document.getElementById("filter-date").value = new Date().toISOString().split('T')[0];
+      
+      // 🚨 核心新增：一进页面主动触发 GPS 权限自检提示机制
+      checkGPSStatus();
       fetchInitData();
     };
 
-    // 选项卡无缝平滑横向切换控制
+    // 🚨 核心功能：主动式 GPS 状态状态机检测与信息提示栏回填
+    function checkGPSStatus() {
+      if (!navigator.geolocation) {
+        updateGPSBar('error', "Your device does not support GPS.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => { updateGPSBar('ok', langDict[currentLang].gps_ok); },
+        err => { updateGPSBar('error', langDict[currentLang].gps_err); },
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+    }
+
+    function updateGPSBar(status, text) {
+      let bar = document.getElementById("gps-status");
+      bar.className = "gps-status-bar " + (status === 'ok' ? 'gps-ok' : 'gps-error');
+      bar.innerText = text;
+    }
+
+    function changeLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`btn-${lang}`).classList.add('active');
+      
+      const d = langDict[lang];
+      document.getElementById("nav-punch").innerText = d.nav_punch;
+      document.getElementById("nav-map").innerText = d.nav_map;
+      document.getElementById("nav-dash").innerText = d.nav_dash;
+      document.getElementById("t-form-title").innerText = d.title;
+      document.getElementById("l-name").innerText = d.name;
+      document.getElementById("l-phone").innerText = d.phone;
+      document.getElementById("l-fin").innerText = d.fin;
+      document.getElementById("l-supervisor").innerText = d.supervisor;
+      document.getElementById("l-trade").innerText = d.trade;
+      document.getElementById("l-area").innerText = d.area;
+      document.getElementById("l-content").innerText = d.content;
+      document.getElementById("b-in").innerText = d.bin;
+      document.getElementById("b-out").innerText = d.bout;
+      document.getElementById("t-live-title").innerText = d.live;
+      
+      // 切换语言时同步刷新 GPS 信息栏提示语
+      checkGPSStatus();
+    }
+
+    function verifyAdmin(type) {
+      let input = document.getElementById(`${type}-password`).value;
+      if(input === ADMIN_PASSWORD) {
+        isAdminUnlocked = true;
+        document.getElementById("map-lock").style.display = "none";
+        document.getElementById("map-inner").style.display = "block";
+        document.getElementById("dash-lock").style.display = "none";
+        document.getElementById("dash-inner").style.display = "block";
+        if(type === 'map') setTimeout(initMap, 100);
+        processAnalytics();
+      } else {
+        alert("🚨 密码错误！Wrong password!");
+      }
+    }
+
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
       event.currentTarget.classList.add('active');
       
-      // 切换至地图选项卡时，触发按需高渲染渲染，解决大小自适应断档问题
-      if(tabId === 'map-tab') {
+      if(tabId === 'map-tab' && isAdminUnlocked) {
         setTimeout(initMap, 150);
       }
     }
 
-    // 后端全功能接口拉取与看板数据重渲染引擎（严格对齐最新 16 列）
     function fetchInitData() {
       fetch(API_URL).then(r => r.json()).then(res => {
         if(res.config) siteConfig = res.config;
+        rawLogs = res.rawLogs || []; 
         
-        // 动态回填前端打卡表单的可选参数
-        renderSelect("trade", res.options.trades);
-        renderSelect("area", res.options.areas);
-        
-        // 精准刷新统计看板数据看板
-        document.getElementById("s_active").innerText = res.analytics.stats.totalActive;
-        document.getElementById("s_day").innerText = res.analytics.stats.dayClosed;
-        document.getElementById("s_over").innerText = res.analytics.stats.overClosed;
-        document.getElementById("s_night").innerText = res.analytics.stats.nightClosed;
-        
-        // 精准刷新工种分布面板明细
-        let tHtml = "";
-        for(let key in res.analytics.stats.trades) {
-          tHtml += `
-            <div class="trade-item">
-              <span>👷 <b>${key}</b></span>
-              <span class="badge">当前在场: ${res.analytics.stats.trades[key]} 人</span>
-            </div>
-          `;
-        }
-        document.getElementById("trade_breakdown").innerHTML = tHtml || "<div style='color:#8e8e93;text-align:center;'>当前施工现场暂无出勤人员</div>";
-      }).catch(err => console.error("云端连线中断:", err));
+        renderSelect("trade", res.options.trades, false);
+        renderSelect("area", res.options.areas, false);
+        renderSelect("supervisor", res.options.supervisors, false);
+        renderSelect("filter-supervisor", res.options.supervisors, true);
+
+        if(isAdminUnlocked) processAnalytics();
+      });
     }
 
-    function renderSelect(id, arr) {
+    function renderSelect(id, arr, isFilter) {
       let el = document.getElementById(id); el.innerHTML = "";
+      if(isFilter) el.options.add(new Option("全部督工 (ALL)", "ALL"));
       arr.forEach(v => el.options.add(new Option(v, v)));
     }
 
-    // 📍 初始化 Leaflet 地图核心层
+    function processAnalytics() {
+      let targetDate = document.getElementById("filter-date").value; 
+      let targetSup = document.getElementById("filter-supervisor").value; 
+      
+      let activeWorkers = {};
+      let stats = { dayClosed: 0, overClosed: 0, nightClosed: 0 };
+      let tradeCounts = {};
+      let mapPoints = [];
+
+      rawLogs.forEach(row => {
+        if(!row[0]) return;
+        let logDate = row[0].split('T')[0];
+        if(logDate !== targetDate) return; 
+        if(targetSup !== "ALL" && row[5] !== targetSup) return; 
+
+        let uid = row[2] + '_' + row[4]; 
+        let action = row[1];
+
+        if(action.includes('checkin')) {
+          activeWorkers[uid] = { name: row[2], fin: row[4], trade: row[6], area: row[7], time: row[0].split('T')[1].substring(0,5), lat: row[9], lon: row[8] };
+        } else if(action.includes('checkout')) {
+          delete activeWorkers[uid];
+        }
+
+        if(action === 'day_checkout') stats.dayClosed++;
+        if(action === 'over_checkout') stats.overClosed++;
+        if(action === 'night_checkout') stats.nightClosed++;
+      });
+
+      let totalActive = 0;
+      for(let key in activeWorkers) {
+        totalActive++;
+        let tr = activeWorkers[key].trade || "未指定";
+        tradeCounts[tr] = (tradeCounts[tr] || 0) + 1;
+        mapPoints.push(activeWorkers[key]);
+      }
+
+      document.getElementById("s_active").innerText = totalActive;
+      document.getElementById("s_day").innerText = stats.dayClosed;
+      document.getElementById("s_over").innerText = stats.overClosed;
+      document.getElementById("s_night").innerText = stats.nightClosed;
+
+      let tHtml = "";
+      for(let tr in tradeCounts) {
+        tHtml += `<div class="trade-item"><span>👷 <b>${tr}</b></span><span class="badge">${tradeCounts[tr]} 人 (Pax)</span></div>`;
+      }
+      document.getElementById("trade_breakdown").innerHTML = tHtml || "<div style='color:#8e8e93;text-align:center;padding:10px;'>此日期/督工下无在场工人</div>";
+
+      refreshMapPoints(mapPoints);
+    }
+
     function initMap() {
       if (map !== null) { map.invalidateSize(); return; }
-      
-      // 初始化绑定地图DOM并聚焦围栏中心
       map = L.map('map').setView([siteConfig.lat, siteConfig.lng], 16);
-      
-      // 挂载免 API Key 的开源 OpenStreetMap 全球高质量瓦片
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-      
-      // 绘制工地电子防作弊围栏红圈
-      L.circle([siteConfig.lat, siteConfig.lng], {
-        color: '#ff3b30', fillColor: '#ff3b30', fillOpacity: 0.12, radius: siteConfig.radius
-      }).addTo(map);
-      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.circle([siteConfig.lat, siteConfig.lng], { color: '#ff3b30', fillColor: '#ff3b30', fillOpacity: 0.1, radius: siteConfig.radius }).addTo(map);
       markerGroup = L.layerGroup().addTo(map);
-      loadMap();
+      processAnalytics();
     }
 
-    // 🔄 异步动态刷新在场工友点位图，智能触发 fitBounds 缩放
-    function loadMap() {
-      if(!map || !markerGroup) return;
+    function refreshMapPoints(points) {
+      if(!markerGroup || !map) return;
       markerGroup.clearLayers();
-      
-      fetch(API_URL).then(r => r.json()).then(res => {
-        let points = [];
-        if(res.analytics && res.analytics.mapData) {
-          res.analytics.mapData.forEach(p => {
-            if(!p.lat || !p.lon) return;
-            points.push([p.lat, p.lon]);
-            
-            // 构建高质感移动端气泡视窗
-            let popupContent = `
-              <div style="font-size:12px; line-height:1.6; min-width:140px;">
-                <b style="color:var(--primary); font-size:14px; display:block; margin-bottom:4px;">${p.name}</b>
-                🆔 <b>准证后四位:</b> ${p.fin}<br>
-                ⏱️ <b>最新打卡时间:</b> ${p.time}<br>
-                🏗️ <b>作业班组工种:</b> ${p.trade}<br>
-                🚧 <b>现场所处区域:</b> ${p.area}
-              </div>
-            `;
-            L.marker([p.lat, p.lon]).addTo(markerGroup).bindPopup(popupContent);
-          });
-        }
-        
-        // 自动缩放视角，将全量工友完美包络入当前视野
-        if(points.length > 0) {
-          map.fitBounds(L.latLngBounds(points), { padding: [40, 40] });
-        } else {
-          map.setView([siteConfig.lat, siteConfig.lng], 16);
-        }
-      }).catch(err => alert("地图点位拉取失败: " + err));
+      let arr = [];
+      points.forEach(p => {
+        if(!p.lat || !p.lon) return;
+        arr.push([p.lat, p.lon]);
+        L.marker([p.lat, p.lon]).addTo(markerGroup).bindPopup(`<b>${p.name} (${p.fin})</b><br>Trade: ${p.trade}<br>Area: ${p.area}<br>Time: ${p.time}`);
+      });
+      if(arr.length > 0) map.fitBounds(L.latLngBounds(arr), { padding: [30, 30] });
     }
 
-    // 👷 提交流水考勤基础数据核心事务
+    // 👷 考勤基础数据提交逻辑（深度融合防漏签、防误判机制机制）
     function submitAttendance(actionType) {
       let name = document.getElementById("name").value.trim();
       let phone = document.getElementById("phone").value.trim();
       let fin = document.getElementById("fin").value.trim().toUpperCase();
+      let supervisor = document.getElementById("supervisor").value;
       
-      if(!name || !phone || fin.length !== 4) {
-        alert("🚨 提交阻断：请务必完整填写 姓名、本地手机号 以及 4位准证尾号！"); return;
+      if(!name || !phone || fin.length !== 4 || !supervisor) {
+        alert("🚨 打卡失败：请务必填齐所有个人信息并选择负责督工！Please fill all fields!"); return;
       }
       
-      // 激活手机高精度 GPS 定位捕获
+      // 1. 激活防重击锁定状态，将按钮置灰，防止由于卡顿造成的重复提交和误判
+      let btnIn = document.getElementById("b-in");
+      let btnOut = document.getElementById("b-out");
+      btnIn.disabled = true; btnOut.disabled = true;
+      let origInText = btnIn.innerText; let origOutText = btnOut.innerText;
+      btnIn.innerText = "正在定位中... Connecting GPS...";
+      btnOut.innerText = "正在定位中... Connecting GPS...";
+
+      // 获取定位
       navigator.geolocation.getCurrentPosition(pos => {
-        let lat = pos.coords.latitude;
-        let lng = pos.coords.longitude;
+        let lat = pos.coords.latitude; let lng = pos.coords.longitude;
         
-        // 高精度哈弗辛多维数学公式距离清算
-        let radLat1 = lat * Math.PI / 180, radLat2 = siteConfig.lat * Math.PI / 180;
-        let diffLng = (lng - siteConfig.lng) * Math.PI / 180;
-        let distance = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin((radLat1 - radLat2)/2),2) + Math.cos(radLat1)*Math.cos(radLat2)*Math.pow(Math.sin(diffLng/2),2))) * 6378137;
-        
+        btnIn.innerText = "正在上传云端... Uploading...";
+        btnOut.innerText = "正在上传云端... Uploading...";
+
         let payload = {
-          action: actionType, name: name, phone: phone, fin: fin,
-          trade: document.getElementById("trade").value,
-          area: document.getElementById("area").value,
-          content: document.getElementById("content").value,
-          lat: lat, lng: lng, distance: distance, siteRadius: siteConfig.radius,
-          deviceId: deviceFingerprint
+          action: actionType, name: name, phone: phone, fin: fin, supervisor: supervisor,
+          trade: document.getElementById("trade").value, area: document.getElementById("area").value, content: document.getElementById("content").value,
+          lat: lat, lng: lng, deviceId: localStorage.getItem('j111_dev_id')
         };
         
-        // 发射 POST 流水请求
+        // 发送云端请求
         fetch(API_URL, { method: "POST", body: JSON.stringify(payload) }).then(r => r.json()).then(res => {
+          // 2. 解锁按钮状态
+          btnIn.disabled = false; btnOut.disabled = false;
+          btnIn.innerText = origInText; btnOut.innerText = origOutText;
+
+          // 3. 明确的信息提示回执机制
           if(res.status === 'success' || res.status === 'updated') {
-            alert(`🎉 操作成功！已成功记录考勤时间: ${res.time || "云端已同步"}`);
+            // 绿色安全闭环提示框，绝不漏签
+            alert(`🎉 打卡成功！云端已完成登记。\n\n时间(Time): ${res.time || ""}\n人员(Name): ${name}`);
             
-            // 实时激活渲染“今日出勤感知卡片”
             if(res.card) {
               document.getElementById("liveCard").style.display = "block";
-              document.getElementById("cardLabel").innerText = res.card.label;
-              document.getElementById("c_di").innerText = res.card.dayIn;
-              document.getElementById("c_do").innerText = res.card.dayOut;
-              document.getElementById("c_oi").innerText = res.card.overIn;
-              document.getElementById("c_oo").innerText = res.card.overOut;
-              document.getElementById("c_ni").innerText = res.card.nightIn;
-              document.getElementById("c_no").innerText = res.card.nightOut;
-              
-              // 让页面顺滑滚动，帮助工友一眼看清卡片变化
+              document.getElementById("c_di").innerText = res.card.dayIn; document.getElementById("c_do").innerText = res.card.dayOut;
+              document.getElementById("c_oi").innerText = res.card.overIn; document.getElementById("c_oo").innerText = res.card.overOut;
+              document.getElementById("c_ni").innerText = res.card.nightIn; document.getElementById("c_no").innerText = res.card.nightOut;
               document.getElementById("liveCard").scrollIntoView({ behavior: 'smooth' });
             }
-            fetchInitData();
-          } else {
-            alert(res.msg || "提交失败，请联系项目管理组。");
+            fetchInitData(); // 异步刷新最新全盘流水
+          } else { 
+            // 异常拦截（如电子围栏阻断、服务器爆满等）的高亮报错
+            alert("❌ 云端拒绝：\n" + (res.msg || "未知网络异常，请重试！")); 
           }
+        }).catch(err => {
+          // 彻底恢复网络挂起状态
+          btnIn.disabled = false; btnOut.disabled = false;
+          btnIn.innerText = origInText; btnOut.innerText = origOutText;
+          alert("🚨 网络断连：数据未能成功送达云端，请检查蜂窝网络并重新打卡！");
         });
       }, err => {
-        alert("❌ 打卡失败：无法获取高精度 GPS 定位信息。请在手机设置或微信中开启该网页的定位获取权限！");
+        // 定位捕获崩塌恢复
+        btnIn.disabled = false; btnOut.disabled = false;
+        btnIn.innerText = origInText; btnOut.innerText = origOutText;
+        updateGPSBar('error', langDict[currentLang].gps_err);
+        alert("❌ 定位失败：未能成功采集到您的 GPS 数据。请务必检查手机定位开关是否打开！");
       }, { enableHighAccuracy: true, timeout: 8000 });
     }
   </script>
